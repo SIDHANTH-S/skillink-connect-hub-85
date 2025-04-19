@@ -256,7 +256,8 @@ const BrowseProfessionals = () => {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+            ))
+          )}
         </motion.div>
         
         {professionals.length === 0 && (
