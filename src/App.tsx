@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import VendorOnboarding from "./pages/onboarding/VendorOnboarding";
 
 // Feature pages
 import BrowseProfessionals from "./pages/homeowner/BrowseProfessionals";
+import BrowseMaterials from "./pages/homeowner/BrowseMaterials";
 
 // Error page
 import NotFound from "./pages/NotFound";
@@ -91,6 +91,7 @@ const App = () => {
             
             {/* Feature routes */}
             <Route path="/homeowner/browse-professionals" element={<BrowseProfessionals />} />
+            <Route path="/homeowner/browse-materials" element={<BrowseMaterials />} />
             
             {/* Fallback routes */}
             <Route path="*" element={<NotFound />} />

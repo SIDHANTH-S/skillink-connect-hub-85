@@ -9,6 +9,87 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          stock: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          stock?: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          stock?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: []
+      }
+      professionals: {
+        Row: {
+          bio: string | null
+          created_at: string
+          experience: number
+          full_name: string
+          id: string
+          location: string
+          phone: string
+          profession_type: string
+          profile_picture: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          experience: number
+          full_name: string
+          id?: string
+          location: string
+          phone: string
+          profession_type: string
+          profile_picture?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          experience?: number
+          full_name?: string
+          id?: string
+          location?: string
+          phone?: string
+          profession_type?: string
+          profile_picture?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

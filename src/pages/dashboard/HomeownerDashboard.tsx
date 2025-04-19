@@ -1,11 +1,10 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleSwitcher from "@/components/RoleSwitcher";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, Users, Building, Calendar, Bookmark, Settings } from "lucide-react";
+import { Search, Users, Building, Calendar, Bookmark } from "lucide-react";
 
 const HomeownerDashboard = () => {
   const navigate = useNavigate();
@@ -21,13 +20,12 @@ const HomeownerDashboard = () => {
       color: "bg-gradient-to-br from-blue-50 to-blue-100"
     },
     {
-      id: "browse-vendors",
-      title: "Find Vendors",
-      description: "Browse suppliers for construction materials",
+      id: "browse-materials",
+      title: "Browse Materials",
+      description: "Find and purchase construction materials",
       icon: <Building className="h-8 w-8 text-skillink-secondary" />,
-      action: () => alert("Coming soon in future updates"),
-      primaryButton: "Coming Soon",
-      disabled: true,
+      action: () => navigate("/homeowner/browse-materials"),
+      primaryButton: "Shop Now",
       color: "bg-gradient-to-br from-purple-50 to-purple-100"
     },
     {
@@ -42,8 +40,8 @@ const HomeownerDashboard = () => {
     },
     {
       id: "saved",
-      title: "Saved Listings",
-      description: "Access your saved professionals and vendors",
+      title: "Saved Items",
+      description: "Access your saved professionals and materials",
       icon: <Bookmark className="h-8 w-8 text-green-500" />,
       action: () => alert("Coming soon in future updates"),
       primaryButton: "Coming Soon",
