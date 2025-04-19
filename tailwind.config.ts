@@ -52,6 +52,19 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+        // Skillink custom colors
+        skillink: {
+          primary: '#0A6E8A',        // Teal blue
+          secondary: '#134E6F',      // Deep blue
+          accent: '#FF7F50',         // Coral orange
+          light: '#E6F3F7',          // Light teal
+          dark: '#0E3E5B',           // Dark blue
+          gray: '#7A8C9E',           // Slate gray
+          success: '#4CAF50',        // Green
+          warning: '#FFC107',        // Amber
+          error: '#F44336',          // Red
+          background: '#F9FBFC',     // Light gray background
+        },
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
