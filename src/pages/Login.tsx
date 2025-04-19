@@ -1,44 +1,92 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { login, isAuthenticated } from "@/utils/auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HardHat } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("test@skillink.com");
-  const [password, setPassword] = useState("123456");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already authenticated
-  if (isAuthenticated()) {
-    navigate("/select-role");
-  }
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (await isAuthenticated()) {
+        navigate("/select-role");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
 
     // Simple validation
     if (!email || !password) {
-      setError("Please enter both email and password");
+      toast({
+        title: "Error",
+        description: "Please enter both email and password",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
 
     // Attempt login
-    const success = login(email, password);
+    const success = await login(email, password);
 
     if (success) {
+      toast({
+        title: "Success",
+        description: "Successfully logged in",
+      });
       navigate("/select-role");
     } else {
-      setError("Invalid credentials. Try test@skillink.com / 123456");
+      toast({
+        title: "Error",
+        description: "Invalid credentials. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (!email || !password) {
+      toast({
+        title: "Error",
+        description: "Please enter both email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    } else {
+      toast({
+        title: "Success",
+        description: "Check your email to confirm your account",
+      });
       setIsLoading(false);
     }
   };
@@ -82,24 +130,26 @@ const Login = () => {
                     placeholder="••••••••"
                   />
                 </div>
-                {error && (
-                  <div className="text-sm text-red-500 p-1">{error}</div>
-                )}
-                <Button 
-                  className="w-full bg-skillink-primary hover:bg-skillink-dark" 
-                  type="submit" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    className="w-full bg-skillink-primary hover:bg-skillink-dark" 
+                    type="submit" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Signing in..." : "Sign In"}
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={handleSignUp}
+                    disabled={isLoading}
+                  >
+                    Create Account
+                  </Button>
+                </div>
               </div>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col">
-            <p className="text-center text-sm text-muted-foreground mt-2">
-              <span className="text-skillink-primary font-semibold">Default credentials:</span> test@skillink.com / 123456
-            </p>
-          </CardFooter>
         </Card>
       </div>
     </div>
