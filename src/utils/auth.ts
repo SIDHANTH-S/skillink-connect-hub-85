@@ -39,8 +39,8 @@ export const logout = async (): Promise<void> => {
 
 // Check if user is authenticated using Supabase
 export const isAuthenticated = async (): Promise<boolean> => {
-  const { data: { session } } = await supabase.auth.getSession();
-  return !!session;
+  const { data } = await supabase.auth.getSession();
+  return !!data.session;
 };
 
 // Set active role
@@ -58,8 +58,10 @@ export const getActiveRole = (): Role | null => {
 };
 
 // Check if user has completed onboarding for a specific role
-export const hasCompletedOnboarding = (role: Role): boolean => {
-  const { data: { user } } = supabase.auth.getSession();
+export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user;
+  
   if (!user) return false;
   
   if (role === 'professional') {

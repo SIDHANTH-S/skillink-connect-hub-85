@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setActiveRole, isAuthenticated, getActiveRole, hasCompletedOnboarding } from "@/utils/auth";
 import { Role } from "@/types";
@@ -9,26 +9,39 @@ import { Home, User, Building, LogOut } from "lucide-react";
 
 const SelectRole = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated
-    if (!isAuthenticated()) {
-      navigate("/login");
-    }
+    const checkAuth = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        navigate("/login");
+      }
+    };
+    
+    checkAuth();
   }, [navigate]);
 
-  const handleRoleSelect = (role: Role) => {
+  const handleRoleSelect = async (role: Role) => {
+    setIsLoading(true);
     setActiveRole(role);
     
-    // Check if user has completed onboarding for this role
-    const completed = hasCompletedOnboarding(role);
-    
-    if (!completed && role !== 'homeowner') {
-      // Redirect to onboarding if not completed (except for homeowner)
-      navigate(`/onboarding/${role}`);
-    } else {
-      // Redirect to dashboard
-      navigate(`/dashboard/${role}`);
+    try {
+      // Check if user has completed onboarding for this role
+      const completed = await hasCompletedOnboarding(role);
+      
+      if (!completed && role !== 'homeowner') {
+        // Redirect to onboarding if not completed (except for homeowner)
+        navigate(`/onboarding/${role}`);
+      } else {
+        // Redirect to dashboard
+        navigate(`/dashboard/${role}`);
+      }
+    } catch (error) {
+      console.error("Error checking onboarding status:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -91,8 +104,9 @@ const SelectRole = () => {
                 <Button
                   className="w-full bg-white text-skillink-primary hover:bg-gray-100 border border-skillink-primary/20"
                   onClick={() => handleRoleSelect(card.id as Role)}
+                  disabled={isLoading}
                 >
-                  Continue as {card.title}
+                  {isLoading ? "Loading..." : `Continue as ${card.title}`}
                 </Button>
               </CardFooter>
             </Card>
