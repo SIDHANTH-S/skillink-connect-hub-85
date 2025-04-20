@@ -1,15 +1,18 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { setActiveRole, isAuthenticated, getActiveRole, hasCompletedOnboarding } from "@/utils/auth";
 import { Role } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Home, User, Building, LogOut } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const SelectRole = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -24,6 +27,7 @@ const SelectRole = () => {
   }, [navigate]);
 
   const handleRoleSelect = async (role: Role) => {
+    setSelectedRole(role);
     setIsLoading(true);
     setActiveRole(role);
     
@@ -32,7 +36,7 @@ const SelectRole = () => {
       const completed = await hasCompletedOnboarding(role);
       
       if (!completed && role !== 'homeowner') {
-        // Redirect to onboarding if not completed (except for homeowner)
+        // Redirect to onboarding if not completed
         navigate(`/onboarding/${role}`);
       } else {
         // Redirect to dashboard
@@ -40,14 +44,29 @@ const SelectRole = () => {
       }
     } catch (error) {
       console.error("Error checking onboarding status:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Something went wrong. Please try again."
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      navigate("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to log out. Please try again."
+      });
+    }
   };
 
   const roleCards = [
@@ -104,9 +123,9 @@ const SelectRole = () => {
                 <Button
                   className="w-full bg-white text-skillink-primary hover:bg-gray-100 border border-skillink-primary/20"
                   onClick={() => handleRoleSelect(card.id as Role)}
-                  disabled={isLoading}
+                  disabled={isLoading && selectedRole === card.id}
                 >
-                  {isLoading ? "Loading..." : `Continue as ${card.title}`}
+                  {isLoading && selectedRole === card.id ? "Loading..." : `Continue as ${card.title}`}
                 </Button>
               </CardFooter>
             </Card>

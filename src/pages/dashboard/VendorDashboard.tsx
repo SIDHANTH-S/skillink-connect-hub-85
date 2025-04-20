@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleSwitcher from "@/components/RoleSwitcher";
@@ -7,15 +8,25 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Building, ShoppingCart, FileEdit, BarChart, TrendingUp, Package, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const VendorDashboard = () => {
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   useEffect(() => {
     // Get user ID
     const userId = localStorage.getItem(LS_KEYS.USER_ID);
-    if (!userId) return;
+    if (!userId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "User ID not found. Please log in again."
+      });
+      navigate("/login");
+      return;
+    }
     
     // Get vendor data
     const vendors = JSON.parse(localStorage.getItem(LS_KEYS.VENDORS) || "[]");
@@ -23,8 +34,19 @@ const VendorDashboard = () => {
     
     if (vendorData) {
       setVendor(vendorData);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Profile Not Found",
+        description: "Please complete your vendor profile setup."
+      });
+      navigate("/onboarding/vendor");
     }
-  }, []);
+  }, [navigate, toast]);
+  
+  const handleManageProducts = () => {
+    navigate("/vendor/manage-products");
+  };
   
   const quickActions = [
     {
@@ -41,7 +63,7 @@ const VendorDashboard = () => {
       title: "Manage Products",
       description: "Add and update your product listings",
       icon: <Package className="h-8 w-8 text-skillink-secondary" />,
-      action: () => navigate("/vendor/manage-products"),
+      action: handleManageProducts,
       primaryButton: "Manage Products",
       color: "bg-gradient-to-br from-purple-50 to-purple-100"
     },
@@ -112,6 +134,28 @@ const VendorDashboard = () => {
               </CardContent>
             </Card>
           )}
+          
+          {/* Featured Action */}
+          <div className="mb-8">
+            <Card className="bg-gradient-to-r from-purple-100 to-blue-100 border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between">
+                  <div className="mb-4 md:mb-0">
+                    <h3 className="text-xl font-bold text-skillink-secondary mb-2">Start Selling Your Products</h3>
+                    <p className="text-gray-700">Add your products to make them available to homeowners and professionals</p>
+                  </div>
+                  <Button
+                    onClick={handleManageProducts}
+                    className="bg-skillink-primary hover:bg-skillink-primary/90 shadow-sm"
+                    size="lg"
+                  >
+                    <Package className="h-5 w-5 mr-2" />
+                    Manage Products
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           
           {/* Quick Actions */}
           <h2 className="text-xl font-bold mb-4 text-skillink-secondary">Quick Actions</h2>

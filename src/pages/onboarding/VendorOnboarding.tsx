@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isAuthenticated, LS_KEYS, generateId } from "@/utils/auth";
+import { isAuthenticated, LS_KEYS } from "@/utils/auth";
 import { Vendor, BusinessType } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,26 +10,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building, MapPin, Phone, User, FileText, Calendar } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const businessTypes: BusinessType[] = [
-  'Cement',
-  'Steel',
-  'Timber',
-  'Glass',
-  'Electrical',
-  'Plumbing',
-  'Hardware',
-  'Tools',
-  'Paint',
-  'Flooring',
-  'Roofing',
-  'Insulation',
-  'Solar',
-  'Other'
+  'Cement', 'Steel', 'Timber', 'Glass', 'Electrical', 'Plumbing', 
+  'Hardware', 'Tools', 'Paint', 'Flooring', 'Roofing', 'Insulation', 
+  'Solar', 'Other'
 ];
 
 const VendorOnboarding = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const [formData, setFormData] = useState<Partial<Vendor>>({
     companyName: "",
@@ -46,10 +37,15 @@ const VendorOnboarding = () => {
   
   useEffect(() => {
     // Check if user is authenticated
-    if (!isAuthenticated()) {
-      navigate("/login");
-      return;
-    }
+    const checkAuthentication = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        navigate("/login");
+        return;
+      }
+    };
+    
+    checkAuthentication();
   }, [navigate]);
   
   const handleChange = (name: keyof Vendor, value: string | number) => {
@@ -95,7 +91,7 @@ const VendorOnboarding = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validate()) {
@@ -108,6 +104,11 @@ const VendorOnboarding = () => {
       // Get user ID
       const userId = localStorage.getItem(LS_KEYS.USER_ID);
       if (!userId) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "User ID not found. Please log in again."
+        });
         navigate("/login");
         return;
       }
@@ -129,10 +130,21 @@ const VendorOnboarding = () => {
         JSON.stringify([...existingVendors, vendorData])
       );
       
-      // Navigate to dashboard
-      navigate("/dashboard/vendor");
+      toast({
+        title: "Success",
+        description: "Vendor profile created successfully!"
+      });
+      
+      // Navigate to dashboard with a slight delay to ensure localStorage is updated
+      setTimeout(() => navigate("/dashboard/vendor"), 300);
+      
     } catch (error) {
       console.error("Error during onboarding:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Something went wrong. Please try again."
+      });
       setIsSubmitting(false);
     }
   };

@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Role, User } from "@/types";
+import { Role } from "@/types";
 
 // LocalStorage keys
 export const LS_KEYS = {
@@ -14,7 +14,7 @@ export const LS_KEYS = {
 // Login function using Supabase
 export const login = async (email: string, password: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -22,6 +22,11 @@ export const login = async (email: string, password: string): Promise<boolean> =
     if (error) {
       console.error('Login error:', error.message);
       return false;
+    }
+
+    // Store user ID after successful login
+    if (data && data.user) {
+      localStorage.setItem(LS_KEYS.USER_ID, data.user.id);
     }
 
     return true;
@@ -35,12 +40,20 @@ export const login = async (email: string, password: string): Promise<boolean> =
 export const logout = async (): Promise<void> => {
   await supabase.auth.signOut();
   localStorage.removeItem(LS_KEYS.ACTIVE_ROLE);
+  localStorage.removeItem(LS_KEYS.USER_ID);
 };
 
 // Check if user is authenticated using Supabase
 export const isAuthenticated = async (): Promise<boolean> => {
   const { data } = await supabase.auth.getSession();
-  return !!data.session;
+  
+  if (data.session?.user) {
+    // Ensure user ID is stored in localStorage when checking authentication
+    localStorage.setItem(LS_KEYS.USER_ID, data.session.user.id);
+    return true;
+  }
+  
+  return false;
 };
 
 // Set active role

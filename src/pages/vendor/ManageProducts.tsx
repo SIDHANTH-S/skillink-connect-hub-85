@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleSwitcher from "@/components/RoleSwitcher";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "@/components/products/ProductForm";
 import { ProductsList } from "@/components/products/ProductsList";
@@ -24,8 +24,17 @@ const ManageProducts = () => {
   const fetchProducts = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "Please log in again to manage your products."
+        });
+        navigate("/login");
+        return;
+      }
 
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -57,7 +66,8 @@ const ManageProducts = () => {
                 onClick={() => navigate("/dashboard/vendor")}
                 className="text-skillink-gray hover:text-skillink-primary transition-colors"
               >
-                <Package className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back to Dashboard
               </Button>
               <h1 className="text-2xl font-bold text-skillink-secondary">
                 Manage Products
@@ -86,6 +96,10 @@ const ManageProducts = () => {
               onSuccess={() => {
                 setIsAddingProduct(false);
                 fetchProducts();
+                toast({
+                  title: "Success",
+                  description: "Product added successfully!"
+                });
               }}
               onCancel={() => setIsAddingProduct(false)}
             />

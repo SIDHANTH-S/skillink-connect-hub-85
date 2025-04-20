@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,9 +24,11 @@ import VendorOnboarding from "./pages/onboarding/VendorOnboarding";
 import BrowseProfessionals from "./pages/homeowner/BrowseProfessionals";
 import BrowseMaterials from "./pages/homeowner/BrowseMaterials";
 
+// Vendor pages
+import ManageProducts from "./pages/vendor/ManageProducts";
+
 // Error page
 import NotFound from "./pages/NotFound";
-import ManageProducts from "./pages/vendor/ManageProducts";
 
 // Root redirect handler as a proper component
 const RootRedirect = () => {
@@ -94,9 +97,11 @@ const App = () => {
             <Route path="/homeowner/browse-professionals" element={<BrowseProfessionals />} />
             <Route path="/homeowner/browse-materials" element={<BrowseMaterials />} />
             
+            {/* Vendor routes */}
+            <Route path="/vendor/manage-products" element={<ManageProducts />} />
+            
             {/* Fallback routes */}
             <Route path="*" element={<NotFound />} />
-            <Route path="/vendor/manage-products" element={<ManageProducts />} />
           </Routes>
         </BrowserRouter>
         <Toaster />
