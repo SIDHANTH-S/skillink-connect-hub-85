@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { isAuthenticated, getActiveRole } from "@/utils/auth";
+import { isAuthenticated, getActiveRole, getPreferredRole } from "@/utils/auth";
 
 // Auth pages
 import Login from "./pages/Login";
@@ -33,6 +33,7 @@ import NotFound from "./pages/NotFound";
 // Root redirect handler as a proper component
 const RootRedirect = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -40,22 +41,33 @@ const RootRedirect = () => {
         // Check if user is authenticated
         const authenticated = await isAuthenticated();
         if (!authenticated) {
-          window.location.href = "/login";
+          setRedirectPath("/login");
           return;
         }
         
-        // Get active role
+        // Get active role from local storage first (for quick redirect)
         const activeRole = getActiveRole();
-        if (!activeRole) {
-          window.location.href = "/select-role";
+        if (activeRole) {
+          setRedirectPath(`/dashboard/${activeRole}`);
           return;
         }
         
-        // Redirect to appropriate dashboard
-        window.location.href = `/dashboard/${activeRole}`;
+        // No active role, check for preferred role from previous sessions
+        try {
+          const preferredRole = await getPreferredRole();
+          if (preferredRole) {
+            setRedirectPath(`/dashboard/${preferredRole}`);
+            return;
+          }
+        } catch (error) {
+          console.error("Error getting preferred role:", error);
+        }
+        
+        // No roles found or error, redirect to select role page
+        setRedirectPath("/select-role");
       } catch (error) {
         console.error("Error during auth check:", error);
-        window.location.href = "/login";
+        setRedirectPath("/login");
       } finally {
         setIsLoading(false);
       }
@@ -63,6 +75,13 @@ const RootRedirect = () => {
     
     checkAuth();
   }, []);
+  
+  // Use useEffect to perform the navigation after state is set
+  useEffect(() => {
+    if (!isLoading && redirectPath) {
+      window.location.href = redirectPath;
+    }
+  }, [isLoading, redirectPath]);
   
   return isLoading ? <div>Loading...</div> : null;
 };

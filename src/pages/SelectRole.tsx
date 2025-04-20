@@ -2,28 +2,63 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { setActiveRole, isAuthenticated, getActiveRole, hasCompletedOnboarding } from "@/utils/auth";
+import { 
+  setActiveRole, 
+  isAuthenticated, 
+  hasCompletedOnboarding, 
+  getUserRoles,
+  getPreferredRole
+} from "@/utils/auth";
 import { Role } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, User, Building, LogOut } from "lucide-react";
+import { Home, User, Building, LogOut, Plus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 const SelectRole = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [userRoles, setUserRoles] = useState<Role[]>([]);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = async () => {
-      const authenticated = await isAuthenticated();
-      if (!authenticated) {
+    // Check if user is authenticated and fetch their roles
+    const checkAuthAndRoles = async () => {
+      try {
+        const authenticated = await isAuthenticated();
+        if (!authenticated) {
+          navigate("/login");
+          return;
+        }
+        
+        // Get existing user roles from Supabase
+        const roles = await getUserRoles();
+        setUserRoles(roles);
+        
+        // If user has only one role, automatically redirect to that dashboard
+        if (roles.length === 1 && roles[0] !== 'homeowner') {
+          const role = roles[0];
+          setActiveRole(role);
+          navigate(`/dashboard/${role}`);
+          return;
+        }
+        
+        // If user has multiple roles, including non-homeowner roles,
+        // let them choose but show their existing roles
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error checking auth and roles:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load user profile. Please try again."
+        });
         navigate("/login");
       }
     };
     
-    checkAuth();
+    checkAuthAndRoles();
   }, [navigate]);
 
   const handleRoleSelect = async (role: Role) => {
@@ -49,7 +84,6 @@ const SelectRole = () => {
         title: "Error",
         description: "Something went wrong. Please try again."
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -93,6 +127,16 @@ const SelectRole = () => {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-skillink-light">
+        <div className="text-center">
+          <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-skillink-light">
       <div className="w-full max-w-4xl p-4">
@@ -101,35 +145,59 @@ const SelectRole = () => {
             Welcome to Skillink 24/7
           </h1>
           <p className="text-gray-600 max-w-lg mx-auto">
-            Select your role to continue to your personalized dashboard experience
+            {userRoles.length > 1 
+              ? "Select one of your roles to continue" 
+              : "Select your role to continue to your personalized dashboard experience"}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {roleCards.map((card) => (
-            <Card key={card.id} className={`overflow-hidden ${card.color} border-0 hover:shadow-lg transition-shadow duration-300`}>
-              <CardHeader className="text-center pb-2">
-                <div className="flex justify-center">{card.icon}</div>
-                <CardTitle className="text-xl text-skillink-dark">
-                  {card.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <CardDescription className="text-sm min-h-[40px]">
-                  {card.description}
-                </CardDescription>
-              </CardContent>
-              <CardFooter className="pt-0">
-                <Button
-                  className="w-full bg-white text-skillink-primary hover:bg-gray-100 border border-skillink-primary/20"
-                  onClick={() => handleRoleSelect(card.id as Role)}
-                  disabled={isLoading && selectedRole === card.id}
-                >
-                  {isLoading && selectedRole === card.id ? "Loading..." : `Continue as ${card.title}`}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {roleCards.map((card) => {
+            const role = card.id as Role;
+            const hasRole = userRoles.includes(role);
+            
+            // For roles the user already has, show "Continue as" button
+            // For roles the user doesn't have, show "+ Add Role" button
+            const buttonText = hasRole 
+              ? `Continue as ${card.title}` 
+              : `+ Add ${card.title} Role`;
+              
+            const buttonIcon = hasRole ? null : <Plus className="mr-1 h-4 w-4" />;
+            
+            return (
+              <Card key={card.id} className={`overflow-hidden ${card.color} border-0 hover:shadow-lg transition-shadow duration-300`}>
+                <CardHeader className="text-center pb-2">
+                  <div className="flex justify-center">{card.icon}</div>
+                  <CardTitle className="text-xl text-skillink-dark">
+                    {card.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <CardDescription className="text-sm min-h-[40px]">
+                    {card.description}
+                  </CardDescription>
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <Button
+                    className={`w-full ${hasRole 
+                      ? "bg-white text-skillink-primary hover:bg-gray-100 border border-skillink-primary/20" 
+                      : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-300"}`}
+                    onClick={() => handleRoleSelect(role)}
+                    disabled={isLoading && selectedRole === role}
+                  >
+                    {isLoading && selectedRole === role ? (
+                      "Loading..."
+                    ) : (
+                      <span className="flex items-center">
+                        {buttonIcon}
+                        {buttonText}
+                      </span>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
         
         <div className="mt-6 text-center">

@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getActiveRole, isAuthenticated, hasCompletedOnboarding } from "@/utils/auth";
+import { getActiveRole, isAuthenticated, hasCompletedOnboarding, getUserRoles } from "@/utils/auth";
 import { Role } from "@/types";
 
 interface ProtectedRouteProps {
@@ -31,10 +31,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         // Get current role
         const activeRole = getActiveRole();
         
-        // If no role is selected, redirect to role selection
+        // If no role is selected, check if user has completed roles
         if (!activeRole) {
-          navigate("/select-role");
-          return;
+          const userRoles = await getUserRoles();
+          
+          // If user has roles, redirect to role selection
+          if (userRoles.length > 0) {
+            navigate("/select-role");
+            return;
+          } else {
+            // User has no roles at all, go to selection
+            navigate("/select-role");
+            return;
+          }
         }
         
         // If specific roles are required and current role isn't in the list

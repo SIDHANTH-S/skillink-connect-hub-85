@@ -55,6 +55,18 @@ export const isAuthenticated = async (): Promise<boolean> => {
   return false;
 };
 
+// Get current user ID
+export const getCurrentUserId = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id || null;
+};
+
+// Get current user email
+export const getCurrentUserEmail = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.email || null;
+};
+
 // Set active role
 export const setActiveRole = (role: Role): void => {
   localStorage.setItem(LS_KEYS.ACTIVE_ROLE, role);
@@ -71,25 +83,30 @@ export const getActiveRole = (): Role | null => {
 
 // Check if user has completed onboarding for a specific role
 export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
-  const { data } = await supabase.auth.getSession();
-  const user = data.session?.user;
+  const userId = await getCurrentUserId();
   
-  if (!user) return false;
+  if (!userId) return false;
   
   if (role === 'professional') {
     // Check in Supabase if the user exists in the professionals table
     const { data: professionalData } = await supabase
       .from('professionals')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
       
     return !!professionalData;
   }
   
   if (role === 'vendor') {
-    const vendors = JSON.parse(localStorage.getItem(LS_KEYS.VENDORS) || '[]');
-    return vendors.some((vendor: any) => vendor.id === user.id);
+    // Check in Supabase if the user exists in the vendors table
+    const { data: vendorData } = await supabase
+      .from('vendors')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+      
+    return !!vendorData;
   }
   
   // Homeowners don't have onboarding
@@ -98,6 +115,47 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   }
   
   return false;
+};
+
+// Get all roles that the user has completed onboarding for
+export const getUserRoles = async (): Promise<Role[]> => {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  
+  const roles: Role[] = [];
+  
+  // Check homeowner (all users can be homeowners)
+  roles.push('homeowner');
+  
+  // Check professional
+  const { data: professionalData } = await supabase
+    .from('professionals')
+    .select('id')
+    .eq('user_id', userId);
+    
+  if (professionalData && professionalData.length > 0) {
+    roles.push('professional');
+  }
+  
+  // Check vendor
+  const { data: vendorData } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('user_id', userId);
+    
+  if (vendorData && vendorData.length > 0) {
+    roles.push('vendor');
+  }
+  
+  return roles;
+};
+
+// Get the preferred role for a user (first role with complete onboarding, or homeowner)
+export const getPreferredRole = async (): Promise<Role> => {
+  const roles = await getUserRoles();
+  
+  // Return the first role that's not homeowner, or homeowner if it's the only role
+  return roles.find(role => role !== 'homeowner') || 'homeowner';
 };
 
 // Utility to generate unique ID (for localStorage)
