@@ -81,7 +81,7 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
     const { data: professionalData } = await supabase
       .from('professionals')
       .select('id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
       
     return !!professionalData;

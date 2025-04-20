@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isAuthenticated, LS_KEYS } from "@/utils/auth";
-import { Professional, ProfessionType } from "@/types";
+import { isAuthenticated } from "@/utils/auth";
+import { ProfessionType } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,20 +30,32 @@ const professionTypes: ProfessionType[] = [
   'Other'
 ];
 
+// Interface to match Supabase table structure
+interface ProfessionalFormData {
+  full_name: string;
+  profession_type: ProfessionType;
+  experience: number;
+  location: string;
+  phone: string;
+  bio: string | null;
+  profile_picture?: string | null;
+}
+
 const ProfessionalOnboarding = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [formData, setFormData] = useState<Partial<Professional>>({
-    fullName: "",
-    professionType: "Civil Engineer",
+  const [formData, setFormData] = useState<ProfessionalFormData>({
+    full_name: "",
+    profession_type: "Civil Engineer",
     experience: 0,
     location: "",
     phone: "",
     bio: "",
+    profile_picture: null,
   });
   
-  const [errors, setErrors] = useState<Partial<Record<keyof Professional, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProfessionalFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -58,7 +70,7 @@ const ProfessionalOnboarding = () => {
     checkAuth();
   }, [navigate]);
   
-  const handleChange = (name: keyof Professional, value: string | number) => {
+  const handleChange = (name: keyof ProfessionalFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when field is edited
     if (errors[name]) {
@@ -67,14 +79,14 @@ const ProfessionalOnboarding = () => {
   };
   
   const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof Professional, string>> = {};
+    const newErrors: Partial<Record<keyof ProfessionalFormData, string>> = {};
     
-    if (!formData.fullName?.trim()) {
-      newErrors.fullName = "Full name is required";
+    if (!formData.full_name?.trim()) {
+      newErrors.full_name = "Full name is required";
     }
     
-    if (!formData.professionType) {
-      newErrors.professionType = "Profession type is required";
+    if (!formData.profession_type) {
+      newErrors.profession_type = "Profession type is required";
     }
     
     if (typeof formData.experience !== 'number' || formData.experience < 0) {
@@ -123,15 +135,16 @@ const ProfessionalOnboarding = () => {
       
       // Create professional profile in Supabase
       const professionalData = {
-        id: userId,
-        fullName: formData.fullName,
-        professionType: formData.professionType,
+        user_id: userId,
+        full_name: formData.full_name,
+        profession_type: formData.profession_type,
         experience: formData.experience,
         location: formData.location,
         phone: formData.phone,
         bio: formData.bio,
-        profilePicture: "",
+        profile_picture: formData.profile_picture || null,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       
       const { error } = await supabase
@@ -178,13 +191,13 @@ const ProfessionalOnboarding = () => {
                   </Label>
                   <Input
                     id="fullName"
-                    value={formData.fullName}
-                    onChange={(e) => handleChange("fullName", e.target.value)}
+                    value={formData.full_name}
+                    onChange={(e) => handleChange("full_name", e.target.value)}
                     placeholder="John Doe"
-                    className={errors.fullName ? "border-red-500" : ""}
+                    className={errors.full_name ? "border-red-500" : ""}
                   />
-                  {errors.fullName && (
-                    <p className="text-xs text-red-500">{errors.fullName}</p>
+                  {errors.full_name && (
+                    <p className="text-xs text-red-500">{errors.full_name}</p>
                   )}
                 </div>
                 
@@ -194,10 +207,10 @@ const ProfessionalOnboarding = () => {
                     <Award className="h-4 w-4" /> Profession
                   </Label>
                   <Select
-                    value={formData.professionType}
-                    onValueChange={(value) => handleChange("professionType", value)}
+                    value={formData.profession_type}
+                    onValueChange={(value) => handleChange("profession_type", value)}
                   >
-                    <SelectTrigger className={errors.professionType ? "border-red-500" : ""}>
+                    <SelectTrigger className={errors.profession_type ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select profession" />
                     </SelectTrigger>
                     <SelectContent>
@@ -208,8 +221,8 @@ const ProfessionalOnboarding = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.professionType && (
-                    <p className="text-xs text-red-500">{errors.professionType}</p>
+                  {errors.profession_type && (
+                    <p className="text-xs text-red-500">{errors.profession_type}</p>
                   )}
                 </div>
                 
@@ -290,7 +303,7 @@ const ProfessionalOnboarding = () => {
                   </Label>
                   <Textarea
                     id="bio"
-                    value={formData.bio}
+                    value={formData.bio || ""}
                     onChange={(e) => handleChange("bio", e.target.value)}
                     placeholder="Tell homeowners about your expertise and experience..."
                     className={`min-h-[120px] ${errors.bio ? "border-red-500" : ""}`}

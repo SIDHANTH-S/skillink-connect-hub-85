@@ -7,22 +7,46 @@ import { Professional } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, MessageSquare, Settings, FileEdit, UsersRound, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProfessionalDashboard = () => {
   const [professional, setProfessional] = useState<Professional | null>(null);
   
   useEffect(() => {
-    // Get user ID
+    // Get user ID from localStorage
     const userId = localStorage.getItem(LS_KEYS.USER_ID);
     if (!userId) return;
     
-    // Get professional data
-    const professionals = JSON.parse(localStorage.getItem(LS_KEYS.PROFESSIONALS) || "[]");
-    const profData = professionals.find((p: Professional) => p.id === userId);
-    
-    if (profData) {
+    // Fetch professional data from Supabase
+    const fetchProfessionalData = async () => {
+      const { data, error } = await supabase
+        .from('professionals')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+        
+      if (error || !data) {
+        console.error("Error fetching professional data:", error);
+        return;
+      }
+      
+      // Convert to our Professional type
+      const profData: Professional = {
+        id: data.id,
+        fullName: data.full_name,
+        professionType: data.profession_type,
+        experience: data.experience,
+        location: data.location,
+        phone: data.phone,
+        bio: data.bio || '',
+        profilePicture: data.profile_picture || '',
+        createdAt: new Date(data.created_at).getTime()
+      };
+      
       setProfessional(profData);
-    }
+    };
+    
+    fetchProfessionalData();
   }, []);
   
   const quickActions = [

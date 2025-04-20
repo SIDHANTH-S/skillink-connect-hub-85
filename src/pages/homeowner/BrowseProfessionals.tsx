@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -12,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, User, MapPin, Phone, Calendar, Star, ArrowLeft, PhoneCall } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { LS_KEYS } from "@/utils/auth";
 
 const BrowseProfessionals = () => {
   const navigate = useNavigate();
@@ -39,13 +39,13 @@ const BrowseProfessionals = () => {
         // Map the data to match our Professional type
         const formattedData: Professional[] = data?.map(prof => ({
           id: prof.id,
-          fullName: prof.fullName,
-          professionType: prof.professionType,
+          fullName: prof.full_name,
+          professionType: prof.profession_type,
           experience: prof.experience,
           location: prof.location,
           phone: prof.phone,
-          bio: prof.bio,
-          profilePicture: prof.profilePicture || '',
+          bio: prof.bio || '',
+          profilePicture: prof.profile_picture || '',
           createdAt: new Date(prof.created_at).getTime()
         })) || [];
         
@@ -301,61 +301,79 @@ const BrowseProfessionals = () => {
           >
             <Button
               className="bg-skillink-primary hover:bg-skillink-dark"
-              onClick={() => {
-                const sampleProfessionals: Professional[] = [
-                  {
-                    id: "sample1",
-                    fullName: "John Smith",
-                    professionType: "Civil Engineer",
-                    experience: 8,
-                    location: "New York, NY",
-                    phone: "+1 (212) 555-1234",
-                    bio: "Experienced civil engineer specializing in structural design and analysis. I have worked on residential and commercial projects across the East Coast with a focus on sustainable building practices.",
-                    profilePicture: "",
-                    createdAt: Date.now(),
-                  },
-                  {
-                    id: "sample2",
-                    fullName: "Emily Johnson",
-                    professionType: "Architect",
-                    experience: 12,
-                    location: "San Francisco, CA",
-                    phone: "+1 (415) 555-6789",
-                    bio: "Award-winning architect with expertise in modern residential design. My approach combines functionality with aesthetic appeal, ensuring spaces that are both beautiful and practical for everyday living.",
-                    profilePicture: "",
-                    createdAt: Date.now(),
-                  },
-                  {
-                    id: "sample3",
-                    fullName: "Michael Rodriguez",
-                    professionType: "Contractor",
-                    experience: 15,
-                    location: "Chicago, IL",
-                    phone: "+1 (312) 555-2468",
-                    bio: "General contractor with extensive experience in home renovations and new construction. My team and I pride ourselves on quality craftsmanship, attention to detail, and completing projects on time and within budget.",
-                    profilePicture: "",
-                    createdAt: Date.now(),
-                  },
-                  {
-                    id: "sample4",
-                    fullName: "Sarah Williams",
-                    professionType: "Interior Designer",
-                    experience: 10,
-                    location: "Miami, FL",
-                    phone: "+1 (305) 555-1357",
-                    bio: "Passionate interior designer specializing in residential and small commercial spaces. I create personalized, functional designs that reflect my clients' personalities and lifestyles while maximizing the potential of their spaces.",
-                    profilePicture: "",
-                    createdAt: Date.now(),
-                  },
-                ];
-                
-                localStorage.setItem(
-                  LS_KEYS.PROFESSIONALS,
-                  JSON.stringify(sampleProfessionals)
-                );
-                
-                setProfessionals(sampleProfessionals);
-                setFilteredProfessionals(sampleProfessionals);
+              onClick={async () => {
+                try {
+                  // Add some sample data for demonstration purposes
+                  const sampleProfessionals = [
+                    {
+                      user_id: "sample1",
+                      full_name: "John Smith",
+                      profession_type: "Civil Engineer",
+                      experience: 8,
+                      location: "New York, NY",
+                      phone: "+1 (212) 555-1234",
+                      bio: "Experienced civil engineer specializing in structural design and analysis. I have worked on residential and commercial projects across the East Coast with a focus on sustainable building practices.",
+                      profile_picture: null,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                    },
+                    {
+                      user_id: "sample2",
+                      full_name: "Emily Johnson",
+                      profession_type: "Architect",
+                      experience: 12,
+                      location: "San Francisco, CA",
+                      phone: "+1 (415) 555-6789",
+                      bio: "Award-winning architect with expertise in modern residential design. My approach combines functionality with aesthetic appeal, ensuring spaces that are both beautiful and practical for everyday living.",
+                      profile_picture: null,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                    },
+                  ];
+                  
+                  // Insert sample data into Supabase
+                  const { error } = await supabase
+                    .from('professionals')
+                    .upsert(sampleProfessionals);
+                    
+                  if (error) throw error;
+                  
+                  // Refresh the professional list
+                  const { data: newData, error: fetchError } = await supabase
+                    .from('professionals')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                    
+                  if (fetchError) throw fetchError;
+                  
+                  // Map the data to match our Professional type
+                  const formattedData: Professional[] = newData?.map(prof => ({
+                    id: prof.id,
+                    fullName: prof.full_name,
+                    professionType: prof.profession_type,
+                    experience: prof.experience,
+                    location: prof.location,
+                    phone: prof.phone,
+                    bio: prof.bio || '',
+                    profilePicture: prof.profile_picture || '',
+                    createdAt: new Date(prof.created_at).getTime()
+                  })) || [];
+                  
+                  setProfessionals(formattedData);
+                  setFilteredProfessionals(formattedData);
+                  
+                  toast({
+                    title: "Success",
+                    description: "Sample professionals added successfully!",
+                  });
+                } catch (error: any) {
+                  console.error("Error adding sample professionals:", error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to add sample professionals. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               Add Sample Professionals (Demo)
