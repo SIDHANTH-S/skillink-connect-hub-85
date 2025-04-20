@@ -25,6 +25,7 @@ import BrowseMaterials from "./pages/homeowner/BrowseMaterials";
 
 // Error page
 import NotFound from "./pages/NotFound";
+import ManageProducts from "./pages/vendor/ManageProducts";
 
 // Root redirect handler as a proper component
 const RootRedirect = () => {
@@ -95,6 +96,7 @@ const App = () => {
             
             {/* Fallback routes */}
             <Route path="*" element={<NotFound />} />
+            <Route path="/vendor/manage-products" element={<ManageProducts />} />
           </Routes>
         </BrowserRouter>
         <Toaster />

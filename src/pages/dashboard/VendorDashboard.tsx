@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleSwitcher from "@/components/RoleSwitcher";
@@ -7,9 +6,11 @@ import { Vendor } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building, ShoppingCart, FileEdit, BarChart, TrendingUp, Package, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const VendorDashboard = () => {
   const [vendor, setVendor] = useState<Vendor | null>(null);
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Get user ID
@@ -40,9 +41,8 @@ const VendorDashboard = () => {
       title: "Manage Products",
       description: "Add and update your product listings",
       icon: <Package className="h-8 w-8 text-skillink-secondary" />,
-      action: () => alert("Coming soon in future updates"),
-      primaryButton: "Coming Soon",
-      disabled: true,
+      action: () => navigate("/vendor/manage-products"),
+      primaryButton: "Manage Products",
       color: "bg-gradient-to-br from-purple-50 to-purple-100"
     },
     {

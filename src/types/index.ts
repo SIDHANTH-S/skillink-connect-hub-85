@@ -1,4 +1,3 @@
-
 export type Role = 'homeowner' | 'professional' | 'vendor';
 
 export interface User {
@@ -69,3 +68,16 @@ export type BusinessType =
   | 'Insulation'
   | 'Solar'
   | 'Other';
+
+export interface Product {
+  id: string;
+  vendor_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  stock: number;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
+}
