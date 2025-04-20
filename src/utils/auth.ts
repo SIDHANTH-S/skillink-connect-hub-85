@@ -6,7 +6,6 @@ import { Role } from "@/types";
 export const LS_KEYS = {
   ACTIVE_ROLE: "skillink_active_role",
   USER_ID: "skillink_user_id",
-  PROFESSIONALS: "skillink_professionals",
   VENDORS: "skillink_vendors",
   HOMEOWNERS: "skillink_homeowners",
 };
@@ -78,8 +77,14 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   if (!user) return false;
   
   if (role === 'professional') {
-    const professionals = JSON.parse(localStorage.getItem(LS_KEYS.PROFESSIONALS) || '[]');
-    return professionals.some((prof: any) => prof.id === user.id);
+    // Check in Supabase if the user exists in the professionals table
+    const { data: professionalData } = await supabase
+      .from('professionals')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+      
+    return !!professionalData;
   }
   
   if (role === 'vendor') {

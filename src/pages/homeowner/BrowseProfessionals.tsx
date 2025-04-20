@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleSwitcher from "@/components/RoleSwitcher";
 import { Professional, ProfessionType } from "@/types";
@@ -24,15 +24,47 @@ const BrowseProfessionals = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    const loadData = async () => {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const loadedProfessionals = JSON.parse(localStorage.getItem(LS_KEYS.PROFESSIONALS) || "[]");
-      setProfessionals(loadedProfessionals);
-      setFilteredProfessionals(loadedProfessionals);
-      setIsLoading(false);
+    const fetchProfessionals = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch professionals from Supabase
+        const { data, error } = await supabase
+          .from('professionals')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Map the data to match our Professional type
+        const formattedData: Professional[] = data?.map(prof => ({
+          id: prof.id,
+          fullName: prof.fullName,
+          professionType: prof.professionType,
+          experience: prof.experience,
+          location: prof.location,
+          phone: prof.phone,
+          bio: prof.bio,
+          profilePicture: prof.profilePicture || '',
+          createdAt: new Date(prof.created_at).getTime()
+        })) || [];
+        
+        setProfessionals(formattedData);
+        setFilteredProfessionals(formattedData);
+      } catch (error: any) {
+        console.error("Error fetching professionals:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load professionals. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
-    loadData();
-  }, []);
+    
+    fetchProfessionals();
+  }, [toast]);
   
   useEffect(() => {
     let results = [...professionals];

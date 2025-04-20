@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isAuthenticated, LS_KEYS, generateId } from "@/utils/auth";
+import { isAuthenticated, LS_KEYS } from "@/utils/auth";
 import { Professional, ProfessionType } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { User, MapPin, Phone, FileText, Award } from "lucide-react";
 
 const professionTypes: ProfessionType[] = [
@@ -30,6 +32,7 @@ const professionTypes: ProfessionType[] = [
 
 const ProfessionalOnboarding = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const [formData, setFormData] = useState<Partial<Professional>>({
     fullName: "",
@@ -45,10 +48,14 @@ const ProfessionalOnboarding = () => {
   
   useEffect(() => {
     // Check if user is authenticated
-    if (!isAuthenticated()) {
-      navigate("/login");
-      return;
-    }
+    const checkAuth = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        navigate("/login");
+      }
+    };
+    
+    checkAuth();
   }, [navigate]);
   
   const handleChange = (name: keyof Professional, value: string | number) => {
@@ -90,7 +97,7 @@ const ProfessionalOnboarding = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validate()) {
@@ -100,34 +107,55 @@ const ProfessionalOnboarding = () => {
     setIsSubmitting(true);
     
     try {
-      // Get user ID
-      const userId = localStorage.getItem(LS_KEYS.USER_ID);
+      // Get user ID from Supabase session
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      
       if (!userId) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to complete onboarding.",
+          variant: "destructive",
+        });
         navigate("/login");
         return;
       }
       
-      // Create professional profile
-      const professionalData: Professional = {
+      // Create professional profile in Supabase
+      const professionalData = {
         id: userId,
-        ...formData as Required<Omit<Professional, 'id' | 'profilePicture' | 'createdAt'>>,
+        fullName: formData.fullName,
+        professionType: formData.professionType,
+        experience: formData.experience,
+        location: formData.location,
+        phone: formData.phone,
+        bio: formData.bio,
         profilePicture: "",
-        createdAt: Date.now(),
+        created_at: new Date().toISOString(),
       };
       
-      // Get existing professionals or initialize empty array
-      const existingProfessionals = JSON.parse(localStorage.getItem(LS_KEYS.PROFESSIONALS) || "[]");
+      const { error } = await supabase
+        .from('professionals')
+        .upsert(professionalData);
+        
+      if (error) {
+        throw error;
+      }
       
-      // Add new professional
-      localStorage.setItem(
-        LS_KEYS.PROFESSIONALS,
-        JSON.stringify([...existingProfessionals, professionalData])
-      );
+      toast({
+        title: "Success!",
+        description: "Your professional profile has been created.",
+      });
       
       // Navigate to dashboard
       navigate("/dashboard/professional");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during onboarding:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create profile. Please try again.",
+        variant: "destructive",
+      });
       setIsSubmitting(false);
     }
   };
