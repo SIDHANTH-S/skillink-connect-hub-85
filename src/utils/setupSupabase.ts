@@ -16,7 +16,9 @@ export const setupSupabaseSchema = async () => {
       .limit(1);
     
     // Now try to add custom columns if they don't exist
-    // Using raw SQL as a workaround for TypeScript issues with RPC
+    // Using raw SQL as a workaround for TypeScript issues
+    // Using explicit type assertions to avoid TypeScript errors
+    
     const addRolesQuery = `
       DO $$ 
       BEGIN 
@@ -37,10 +39,11 @@ export const setupSupabaseSchema = async () => {
       END $$;
     `;
     
-    // Execute the raw SQL queries
-    const { error: addRolesError } = await supabase.rpc('exec_sql', { 
-      sql_query: addRolesQuery 
-    });
+    // Execute the raw SQL queries with proper type assertions
+    const { error: addRolesError } = await supabase.rpc(
+      'exec_sql', 
+      { sql_query: addRolesQuery } as any
+    );
     
     if (addRolesError) {
       console.warn("Could not add roles column:", addRolesError);
@@ -49,9 +52,10 @@ export const setupSupabaseSchema = async () => {
       console.log("Roles column check completed successfully");
     }
     
-    const { error: addVendorDataError } = await supabase.rpc('exec_sql', { 
-      sql_query: addVendorDataQuery 
-    });
+    const { error: addVendorDataError } = await supabase.rpc(
+      'exec_sql', 
+      { sql_query: addVendorDataQuery } as any
+    );
     
     if (addVendorDataError) {
       console.warn("Could not add vendor_data column:", addVendorDataError);
