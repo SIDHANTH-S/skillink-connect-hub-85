@@ -34,15 +34,21 @@ export const setupSupabaseSchema = async () => {
 
     // For the roles column, use raw SQL via RPC call
     try {
-      // Define the RPC parameters type
+      // Define the structure for our RPC function parameters
+      interface RpcParams {
+        table_name: string;
+        column_name: string;
+      }
+      
+      // Use explicit type assertion for the RPC call parameters
       const checkColumnParams = { 
         table_name: 'profiles', 
         column_name: 'roles' 
-      };
+      } as unknown as RpcParams;
       
       // Use type assertion to bypass TypeScript's type checking for RPC call
       const { data: rolesColumnCheck, error: rolesCheckError } = await supabase
-        .rpc('check_column_exists', checkColumnParams as any)
+        .rpc('check_column_exists', checkColumnParams)
         .single() as unknown as { data: boolean, error: any };
 
       if (!rolesCheckError && !rolesColumnCheck) {
@@ -50,14 +56,20 @@ export const setupSupabaseSchema = async () => {
         console.log("Adding roles column to profiles table...");
         
         try {
-          // Define the SQL query parameters type with explicit type assertion
+          // Define interface for SQL exec parameters
+          interface SqlExecParams {
+            sql_query: string;
+          }
+          
+          // Define the SQL query parameters with explicit type assertion
           const sqlParams = { 
             sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" 
-          };
+          } as unknown as SqlExecParams;
           
           // Type assertion for the RPC call
           const { error: createRolesError } = await supabase
-            .rpc('exec_sql', sqlParams as any) as unknown as { error: any };
+            .rpc('exec_sql', sqlParams)
+            .then(response => response as unknown as { error: any });
             
           if (createRolesError) {
             console.warn("Could not add roles column:", createRolesError);
@@ -77,15 +89,21 @@ export const setupSupabaseSchema = async () => {
 
     // For the vendor_data column, use similar approach
     try {
-      // Define the RPC parameters type
+      // Use the same RpcParams interface defined above
+      interface RpcParams {
+        table_name: string;
+        column_name: string;
+      }
+      
+      // Use explicit type assertion for the RPC call parameters
       const checkColumnParams = { 
         table_name: 'profiles', 
         column_name: 'vendor_data' 
-      };
+      } as unknown as RpcParams;
       
       // Use type assertion to bypass TypeScript's type checking for RPC call
       const { data: vendorDataColumnCheck, error: vendorDataCheckError } = await supabase
-        .rpc('check_column_exists', checkColumnParams as any)
+        .rpc('check_column_exists', checkColumnParams)
         .single() as unknown as { data: boolean, error: any };
 
       if (!vendorDataCheckError && !vendorDataColumnCheck) {
@@ -93,14 +111,20 @@ export const setupSupabaseSchema = async () => {
         console.log("Adding vendor_data column to profiles table...");
         
         try {
-          // Define the SQL query parameters type with explicit type assertion
+          // Use the same SqlExecParams interface defined above
+          interface SqlExecParams {
+            sql_query: string;
+          }
+          
+          // Define the SQL query parameters with explicit type assertion
           const sqlParams = { 
             sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" 
-          };
+          } as unknown as SqlExecParams;
           
           // Type assertion for the RPC call
           const { error: createVendorDataError } = await supabase
-            .rpc('exec_sql', sqlParams as any) as unknown as { error: any };
+            .rpc('exec_sql', sqlParams)
+            .then(response => response as unknown as { error: any });
             
           if (createVendorDataError) {
             console.warn("Could not add vendor_data column:", createVendorDataError);
