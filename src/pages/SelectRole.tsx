@@ -75,10 +75,16 @@ const SelectRole = () => {
       // Save the new role to user's profile
       await saveUserRole(role);
       
+      // Homeowners don't need onboarding, redirect directly to dashboard
+      if (role === 'homeowner') {
+        navigate(`/dashboard/${role}`);
+        return;
+      }
+      
       // Check if user has completed onboarding for this role
       const completed = await hasCompletedOnboarding(role);
       
-      if (!completed && role !== 'homeowner') {
+      if (!completed) {
         // Redirect to onboarding if not completed
         navigate(`/onboarding/${role}`);
       } else {
@@ -224,4 +230,3 @@ const SelectRole = () => {
 };
 
 export default SelectRole;
-

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Role } from "@/types";
 
@@ -132,13 +131,20 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   
   if (role === 'professional') {
     // Check in Supabase if the user exists in the professionals table
-    const { data: professionalData } = await supabase
+    // But first check if we already have a record to avoid duplicate key error
+    const { data: professionalData, error } = await supabase
       .from('professionals')
       .select('id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
       
-    return !!professionalData;
+    // If there's no error and we found data, user has completed onboarding
+    if (!error && professionalData) {
+      return true;
+    }
+    
+    // If there's no record yet, onboarding is not complete
+    return false;
   }
   
   if (role === 'vendor') {

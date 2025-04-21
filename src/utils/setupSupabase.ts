@@ -34,25 +34,30 @@ export const setupSupabaseSchema = async () => {
 
     // For the roles column, use raw SQL via RPC call
     try {
+      // Define the RPC parameters type
+      const checkColumnParams = { 
+        table_name: 'profiles', 
+        column_name: 'roles' 
+      };
+      
       // This is a type assertion to bypass TypeScript's type checking
       const { data: rolesColumnCheck, error: rolesCheckError } = await (supabase
-        .rpc('check_column_exists', { 
-          table_name: 'profiles', 
-          column_name: 'roles' 
-        } as any)
-        .single() as any);
+        .rpc('check_column_exists', checkColumnParams as any)
+        .single() as unknown as Promise<{ data: boolean, error: any }>);
 
       if (!rolesCheckError && !rolesColumnCheck) {
         // The column doesn't exist, try to add it using a direct SQL query
         console.log("Adding roles column to profiles table...");
         
         try {
+          // Define the SQL query parameters type
+          const sqlParams = { 
+            sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" 
+          };
+          
           // Try to add the column using raw SQL
-          // Type assertion to bypass type checking
           const { error: createRolesError } = await (supabase
-            .rpc('exec_sql', { 
-              sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" 
-            } as any) as any);
+            .rpc('exec_sql', sqlParams as any) as unknown as Promise<{ error: any }>);
             
           if (createRolesError) {
             console.warn("Could not add roles column:", createRolesError);
@@ -72,25 +77,30 @@ export const setupSupabaseSchema = async () => {
 
     // For the vendor_data column, use similar approach
     try {
+      // Define the RPC parameters type
+      const checkColumnParams = { 
+        table_name: 'profiles', 
+        column_name: 'vendor_data' 
+      };
+      
       // This is a type assertion to bypass TypeScript's type checking
       const { data: vendorDataColumnCheck, error: vendorDataCheckError } = await (supabase
-        .rpc('check_column_exists', { 
-          table_name: 'profiles', 
-          column_name: 'vendor_data' 
-        } as any)
-        .single() as any);
+        .rpc('check_column_exists', checkColumnParams as any)
+        .single() as unknown as Promise<{ data: boolean, error: any }>);
 
       if (!vendorDataCheckError && !vendorDataColumnCheck) {
         // The column doesn't exist, try to add it using a direct SQL query
         console.log("Adding vendor_data column to profiles table...");
         
         try {
+          // Define the SQL query parameters type
+          const sqlParams = { 
+            sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" 
+          };
+          
           // Try to add the column using raw SQL
-          // Type assertion to bypass type checking
           const { error: createVendorDataError } = await (supabase
-            .rpc('exec_sql', { 
-              sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" 
-            } as any) as any);
+            .rpc('exec_sql', sqlParams as any) as unknown as Promise<{ error: any }>);
             
           if (createVendorDataError) {
             console.warn("Could not add vendor_data column:", createVendorDataError);
