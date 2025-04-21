@@ -7,7 +7,8 @@ import {
   isAuthenticated, 
   hasCompletedOnboarding, 
   getUserRoles,
-  getPreferredRole
+  getPreferredRole,
+  saveUserRole
 } from "@/utils/auth";
 import { Role } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,16 +37,14 @@ const SelectRole = () => {
         setUserRoles(roles);
         
         // If user has only one role, automatically redirect to that dashboard
-        if (roles.length === 1 && roles[0] !== 'homeowner') {
+        if (roles.length === 1) {
           const role = roles[0];
           setActiveRole(role);
           navigate(`/dashboard/${role}`);
           return;
         }
         
-        // If user has multiple roles, including non-homeowner roles,
-        // let them choose but show their existing roles
-        
+        // If user has multiple roles, let them choose
         setIsLoading(false);
       } catch (error) {
         console.error("Error checking auth and roles:", error);
@@ -67,6 +66,15 @@ const SelectRole = () => {
     setActiveRole(role);
     
     try {
+      // If the user already has this role, just redirect to dashboard
+      if (userRoles.includes(role)) {
+        navigate(`/dashboard/${role}`);
+        return;
+      }
+      
+      // Save the new role to user's profile
+      await saveUserRole(role);
+      
       // Check if user has completed onboarding for this role
       const completed = await hasCompletedOnboarding(role);
       
@@ -216,3 +224,4 @@ const SelectRole = () => {
 };
 
 export default SelectRole;
+

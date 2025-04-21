@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isAuthenticated, LS_KEYS } from "@/utils/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { isAuthenticated, saveUserRole, setActiveRole, getCurrentUserId } from "@/utils/auth";
 import { Vendor, BusinessType } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,22 @@ const VendorOnboarding = () => {
       if (!authenticated) {
         navigate("/login");
         return;
+      }
+      
+      // Check if user already has vendor data
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('vendor_data')
+          .eq('id', userId)
+          .single();
+          
+        if (profileData?.vendor_data) {
+          // User already has vendor data, redirect to dashboard
+          setActiveRole('vendor');
+          navigate('/dashboard/vendor');
+        }
       }
     };
     
@@ -102,7 +119,7 @@ const VendorOnboarding = () => {
     
     try {
       // Get user ID
-      const userId = localStorage.getItem(LS_KEYS.USER_ID);
+      const userId = await getCurrentUserId();
       if (!userId) {
         toast({
           variant: "destructive",
@@ -113,30 +130,43 @@ const VendorOnboarding = () => {
         return;
       }
       
-      // Create vendor profile
-      const vendorData: Vendor = {
-        id: userId,
-        ...formData as Required<Omit<Vendor, 'id' | 'logo' | 'createdAt'>>,
-        logo: "",
-        createdAt: Date.now(),
+      // Create vendor data
+      const vendorData = {
+        company_name: formData.companyName,
+        business_type: formData.businessType,
+        years_in_business: formData.yearsInBusiness,
+        location: formData.location,
+        contact_person: formData.contactPerson,
+        phone: formData.phone,
+        description: formData.description,
+        created_at: new Date().toISOString(),
       };
       
-      // Get existing vendors or initialize empty array
-      const existingVendors = JSON.parse(localStorage.getItem(LS_KEYS.VENDORS) || "[]");
+      // Save vendor data to user's profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          vendor_data: vendorData,
+        });
       
-      // Add new vendor
-      localStorage.setItem(
-        LS_KEYS.VENDORS,
-        JSON.stringify([...existingVendors, vendorData])
-      );
+      if (profileError) {
+        throw new Error(profileError.message);
+      }
+      
+      // Add vendor role to user's roles
+      await saveUserRole('vendor');
+      
+      // Set active role to vendor
+      setActiveRole('vendor');
       
       toast({
         title: "Success",
         description: "Vendor profile created successfully!"
       });
       
-      // Navigate to dashboard with a slight delay to ensure localStorage is updated
-      setTimeout(() => navigate("/dashboard/vendor"), 300);
+      // Navigate to dashboard
+      navigate("/dashboard/vendor");
       
     } catch (error) {
       console.error("Error during onboarding:", error);
@@ -325,3 +355,4 @@ const VendorOnboarding = () => {
 };
 
 export default VendorOnboarding;
+

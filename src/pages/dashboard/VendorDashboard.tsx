@@ -1,8 +1,8 @@
-
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleSwitcher from "@/components/RoleSwitcher";
-import { LS_KEYS } from "@/utils/auth";
+import { getCurrentUserId } from "@/utils/auth";
 import { Vendor } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,38 +10,68 @@ import { Building, ShoppingCart, FileEdit, BarChart, TrendingUp, Package, Settin
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
+interface VendorData {
+  company_name: string;
+  business_type: string;
+  years_in_business: number;
+  location: string;
+  contact_person: string;
+  phone: string;
+  description: string;
+  created_at: string;
+}
+
 const VendorDashboard = () => {
-  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [vendorData, setVendorData] = useState<VendorData | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
   useEffect(() => {
-    // Get user ID
-    const userId = localStorage.getItem(LS_KEYS.USER_ID);
-    if (!userId) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "User ID not found. Please log in again."
-      });
-      navigate("/login");
-      return;
-    }
+    const fetchVendorData = async () => {
+      try {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "User ID not found. Please log in again."
+          });
+          navigate("/login");
+          return;
+        }
+        
+        // Get vendor data from user profile
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('vendor_data')
+          .eq('id', userId)
+          .single();
+          
+        if (error) {
+          throw new Error(error.message);
+        }
+        
+        if (profileData?.vendor_data) {
+          setVendorData(profileData.vendor_data as VendorData);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Profile Not Found",
+            description: "Please complete your vendor profile setup."
+          });
+          navigate("/onboarding/vendor");
+        }
+      } catch (error) {
+        console.error("Error fetching vendor data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load profile data."
+        });
+      }
+    };
     
-    // Get vendor data
-    const vendors = JSON.parse(localStorage.getItem(LS_KEYS.VENDORS) || "[]");
-    const vendorData = vendors.find((v: Vendor) => v.id === userId);
-    
-    if (vendorData) {
-      setVendor(vendorData);
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Profile Not Found",
-        description: "Please complete your vendor profile setup."
-      });
-      navigate("/onboarding/vendor");
-    }
+    fetchVendorData();
   }, [navigate, toast]);
   
   const handleManageProducts = () => {
@@ -105,7 +135,7 @@ const VendorDashboard = () => {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Business Profile Summary */}
-          {vendor && (
+          {vendorData && (
             <Card className="mb-8 bg-white border-0 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
@@ -113,22 +143,22 @@ const VendorDashboard = () => {
                     <Building className="h-12 w-12 text-skillink-primary" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-skillink-dark">{vendor.companyName}</h2>
+                    <h2 className="text-2xl font-bold text-skillink-dark">{vendorData.company_name}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 mt-3">
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Business Type:</span> {vendor.businessType}
+                        <span className="font-medium">Business Type:</span> {vendorData.business_type}
                       </p>
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Years in Business:</span> {vendor.yearsInBusiness}
+                        <span className="font-medium">Years in Business:</span> {vendorData.years_in_business}
                       </p>
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Location:</span> {vendor.location}
+                        <span className="font-medium">Location:</span> {vendorData.location}
                       </p>
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Contact:</span> {vendor.contactPerson}, {vendor.phone}
+                        <span className="font-medium">Contact:</span> {vendorData.contact_person}, {vendorData.phone}
                       </p>
                     </div>
-                    <p className="mt-3 text-gray-700">{vendor.description}</p>
+                    <p className="mt-3 text-gray-700">{vendorData.description}</p>
                   </div>
                 </div>
               </CardContent>

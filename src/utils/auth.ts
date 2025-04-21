@@ -6,8 +6,6 @@ import { Role } from "@/types";
 export const LS_KEYS = {
   ACTIVE_ROLE: "skillink_active_role",
   USER_ID: "skillink_user_id",
-  VENDORS: "skillink_vendors",
-  HOMEOWNERS: "skillink_homeowners",
 };
 
 // Login function using Supabase
@@ -26,6 +24,17 @@ export const login = async (email: string, password: string): Promise<boolean> =
     // Store user ID after successful login
     if (data && data.user) {
       localStorage.setItem(LS_KEYS.USER_ID, data.user.id);
+      
+      // Try to get user profile and set active role if exists
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('roles')
+        .eq('id', data.user.id)
+        .single();
+        
+      if (profileData?.roles && profileData.roles.length > 0) {
+        setActiveRole(profileData.roles[0]);
+      }
     }
 
     return true;
@@ -76,7 +85,7 @@ export const setActiveRole = (role: Role): void => {
 export const getActiveRole = (): Role | null => {
   const role = localStorage.getItem(LS_KEYS.ACTIVE_ROLE);
   if (role === "homeowner" || role === "professional" || role === "vendor") {
-    return role;
+    return role as Role;
   }
   return null;
 };
@@ -86,6 +95,16 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   const userId = await getCurrentUserId();
   
   if (!userId) return false;
+  
+  // First check if the user has this role in their profile
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('roles')
+    .eq('id', userId)
+    .single();
+    
+  const hasRole = profileData?.roles?.includes(role);
+  if (!hasRole) return false;
   
   if (role === 'professional') {
     // Check in Supabase if the user exists in the professionals table
@@ -99,14 +118,14 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   }
   
   if (role === 'vendor') {
-    // Check in Supabase if the user exists in the vendors table
-    const { data: vendorData } = await supabase
-      .from('vendors')
-      .select('id')
-      .eq('user_id', userId)
+    // Check if the user has vendor data in their profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('vendor_data')
+      .eq('id', userId)
       .single();
       
-    return !!vendorData;
+    return !!profileData?.vendor_data;
   }
   
   // Homeowners don't have onboarding
@@ -122,43 +141,67 @@ export const getUserRoles = async (): Promise<Role[]> => {
   const userId = await getCurrentUserId();
   if (!userId) return [];
   
-  const roles: Role[] = [];
-  
-  // Check homeowner (all users can be homeowners)
-  roles.push('homeowner');
-  
-  // Check professional
-  const { data: professionalData } = await supabase
-    .from('professionals')
-    .select('id')
-    .eq('user_id', userId);
+  // Get roles from user profile
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('roles')
+    .eq('id', userId)
+    .single();
     
-  if (professionalData && professionalData.length > 0) {
-    roles.push('professional');
+  if (profileData?.roles && Array.isArray(profileData.roles)) {
+    return profileData.roles as Role[];
   }
   
-  // Check vendor
-  const { data: vendorData } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('user_id', userId);
-    
-  if (vendorData && vendorData.length > 0) {
-    roles.push('vendor');
-  }
-  
-  return roles;
+  // Fallback to empty array
+  return [];
 };
 
 // Get the preferred role for a user (first role with complete onboarding, or homeowner)
-export const getPreferredRole = async (): Promise<Role> => {
+export const getPreferredRole = async (): Promise<Role | null> => {
   const roles = await getUserRoles();
   
   // Return the first role that's not homeowner, or homeowner if it's the only role
-  return roles.find(role => role !== 'homeowner') || 'homeowner';
+  return roles.find(role => role !== 'homeowner') || (roles.includes('homeowner') ? 'homeowner' : null);
+};
+
+// Save user's role to their profile
+export const saveUserRole = async (role: Role): Promise<boolean> => {
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  
+  // Get current roles
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('roles')
+    .eq('id', userId)
+    .single();
+    
+  let roles: Role[] = [];
+  
+  // If user has existing roles, add the new one if not already present
+  if (existingProfile?.roles && Array.isArray(existingProfile.roles)) {
+    roles = [...existingProfile.roles];
+    if (!roles.includes(role)) {
+      roles.push(role);
+    }
+  } else {
+    // No existing roles, just add the new one
+    roles = [role];
+  }
+  
+  // Update profile with new roles array
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      roles
+    });
+    
+  return !error;
 };
 
 // Utility to generate unique ID (for localStorage)
 export const generateId = (): string => {
   return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
+
