@@ -9,64 +9,104 @@ export const setupSupabaseSchema = async () => {
   try {
     console.log("Checking Supabase schema...");
     
-    // First, try to create the columns directly using raw SQL
-    // Attempt to add 'roles' column to profiles table if it doesn't exist
-    const addRolesResult = await supabase.from('profiles')
+    // First, try to query the profiles table to see if it exists
+    const { data: profilesCheck, error: profilesError } = await supabase.from('profiles')
       .select('id')
       .limit(1)
       .maybeSingle();
     
-    if (addRolesResult.error) {
-      console.warn("Could not query profiles table:", addRolesResult.error);
+    if (profilesError) {
+      console.warn("Could not query profiles table:", profilesError);
       return;
     }
 
-    // Check if the profiles table already has the roles column
-    const { data: rolesColumnCheck, error: rolesCheckError } = await supabase
-      .rpc('check_column_exists', { 
-        table_name: 'profiles', 
-        column_name: 'roles' 
+    // Create a dummy schema setup record if it doesn't exist
+    const { error: setupError } = await supabase.from('profiles')
+      .upsert({ 
+        id: 'schema_setup', 
+        full_name: 'Schema Setup',
+        updated_at: new Date().toISOString()
       })
-      .single();
+      .select();
 
-    if (!rolesCheckError && !rolesColumnCheck) {
-      // Add roles column with default empty array
-      const { error: createRolesError } = await supabase
-        .from('profiles')
-        .update({ roles: [] })
-        .eq('id', 'schema_setup')
-        .select();
-
-      if (createRolesError) {
-        console.warn("Could not add roles column:", createRolesError);
-        console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN roles JSONB DEFAULT '[]'::jsonb;");
-      } else {
-        console.log("Roles column added successfully");
-      }
+    if (setupError) {
+      console.warn("Could not create schema setup record:", setupError);
     }
 
-    // Check if the profiles table already has the vendor_data column
-    const { data: vendorDataColumnCheck, error: vendorDataCheckError } = await supabase
-      .rpc('check_column_exists', { 
-        table_name: 'profiles', 
-        column_name: 'vendor_data' 
-      })
-      .single();
+    // For the roles column, use raw SQL via RPC call
+    try {
+      // This is a type assertion to bypass TypeScript's type checking
+      const { data: rolesColumnCheck, error: rolesCheckError } = await (supabase
+        .rpc('check_column_exists', { 
+          table_name: 'profiles', 
+          column_name: 'roles' 
+        }) as any)
+        .single();
 
-    if (!vendorDataCheckError && !vendorDataColumnCheck) {
-      // Add vendor_data column
-      const { error: createVendorDataError } = await supabase
-        .from('profiles')
-        .update({ vendor_data: {} })
-        .eq('id', 'schema_setup')
-        .select();
-
-      if (createVendorDataError) {
-        console.warn("Could not add vendor_data column:", createVendorDataError);
-        console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN vendor_data JSONB DEFAULT NULL;");
-      } else {
-        console.log("Vendor_data column added successfully");
+      if (!rolesCheckError && !rolesColumnCheck) {
+        // The column doesn't exist, try to add it using a direct SQL query
+        console.log("Adding roles column to profiles table...");
+        
+        try {
+          // Try to add the column using raw SQL
+          // Type assertion to bypass type checking
+          const { error: createRolesError } = await (supabase
+            .rpc('exec_sql', { 
+              sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" 
+            }) as any);
+            
+          if (createRolesError) {
+            console.warn("Could not add roles column:", createRolesError);
+            console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN roles JSONB DEFAULT '[]'::jsonb;");
+          } else {
+            console.log("Roles column added successfully");
+          }
+        } catch (sqlError) {
+          console.warn("Error executing SQL to add roles column:", sqlError);
+          console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN roles JSONB DEFAULT '[]'::jsonb;");
+        }
       }
+    } catch (checkError) {
+      console.warn("Error checking for roles column:", checkError);
+      console.log("Falling back to RLS policies for roles. Please add the column manually in Supabase dashboard.");
+    }
+
+    // For the vendor_data column, use similar approach
+    try {
+      // This is a type assertion to bypass TypeScript's type checking
+      const { data: vendorDataColumnCheck, error: vendorDataCheckError } = await (supabase
+        .rpc('check_column_exists', { 
+          table_name: 'profiles', 
+          column_name: 'vendor_data' 
+        }) as any)
+        .single();
+
+      if (!vendorDataCheckError && !vendorDataColumnCheck) {
+        // The column doesn't exist, try to add it using a direct SQL query
+        console.log("Adding vendor_data column to profiles table...");
+        
+        try {
+          // Try to add the column using raw SQL
+          // Type assertion to bypass type checking
+          const { error: createVendorDataError } = await (supabase
+            .rpc('exec_sql', { 
+              sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" 
+            }) as any);
+            
+          if (createVendorDataError) {
+            console.warn("Could not add vendor_data column:", createVendorDataError);
+            console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN vendor_data JSONB DEFAULT NULL;");
+          } else {
+            console.log("Vendor_data column added successfully");
+          }
+        } catch (sqlError) {
+          console.warn("Error executing SQL to add vendor_data column:", sqlError);
+          console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN vendor_data JSONB DEFAULT NULL;");
+        }
+      }
+    } catch (checkError) {
+      console.warn("Error checking for vendor_data column:", checkError);
+      console.log("Falling back to RLS policies for vendor_data. Please add the column manually in Supabase dashboard.");
     }
     
     console.log("Schema verification complete");
@@ -75,6 +115,3 @@ export const setupSupabaseSchema = async () => {
     console.error("Error setting up Supabase schema:", error);
   }
 };
-
-// Fallback approach when RPC and direct column addition fails
-// Update App.tsx to show a toast notice prompting manual column addition

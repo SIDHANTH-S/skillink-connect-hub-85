@@ -36,6 +36,7 @@ import NotFound from "./pages/NotFound";
 const RootRedirect = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
+  const [schemaSetupNeeded, setSchemaSetupNeeded] = useState(false);
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,15 +46,24 @@ const RootRedirect = () => {
         // First set up our schema if needed
         await setupSupabaseSchema();
         
-        // Show a warning toast about missing columns if needed
-        toast.warning(
-          "Database Setup Required", 
-          {
-            description: "You need to manually add 'roles' and 'vendor_data' columns to the profiles table in Supabase. Please check the console for instructions.",
-            duration: 10000,
-            id: "schema-setup-warning"
+        // Check if we need to show schema setup warning
+        try {
+          // Try to access profiles with the vendor_data column to check if it exists
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('vendor_data')
+            .limit(1);
+          
+          // If there's an error that suggests the column doesn't exist
+          if (profileError && profileError.message && 
+              (profileError.message.includes('vendor_data') || 
+               profileError.message.includes('roles'))) {
+            setSchemaSetupNeeded(true);
           }
-        );
+        } catch (error) {
+          console.error("Error checking schema:", error);
+          setSchemaSetupNeeded(true);
+        }
         
         // Check if user is authenticated
         const authenticated = await isAuthenticated();
@@ -92,6 +102,20 @@ const RootRedirect = () => {
     
     checkAuth();
   }, []);
+  
+  // Show schema setup warning if needed
+  useEffect(() => {
+    if (schemaSetupNeeded) {
+      toast.warning(
+        "Database Setup Required", 
+        {
+          description: "You need to manually add 'roles' and 'vendor_data' columns to the profiles table in Supabase. Please check the console for instructions.",
+          duration: 10000,
+          id: "schema-setup-warning"
+        }
+      );
+    }
+  }, [schemaSetupNeeded]);
   
   useEffect(() => {
     if (!isLoading && redirectPath) {

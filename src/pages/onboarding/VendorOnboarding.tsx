@@ -165,40 +165,46 @@ const VendorOnboarding = () => {
           throw new Error(profileFetchError.message);
         }
         
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
+        try {
+          const updateData: any = {
             id: userId,
             vendor_data: vendorData,
             full_name: existingProfile?.full_name || null,
             avatar_url: existingProfile?.avatar_url || null,
             updated_at: new Date().toISOString(),
-            created_at: existingProfile?.created_at || new Date().toISOString(),
-          });
-        
-        if (profileError) {
-          if (profileError.message && profileError.message.includes("vendor_data")) {
-            toast.error("Database setup required", {
-              description: "The 'vendor_data' column doesn't exist in the profiles table. Please add it in the Supabase dashboard.",
-              duration: 10000,
-            });
-            throw new Error("Database setup required: " + profileError.message);
-          } else {
-            throw new Error(profileError.message);
+            created_at: existingProfile?.created_at || new Date().toISOString()
+          };
+          
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert(updateData)
+            .select();
+          
+          if (profileError) {
+            if (profileError.message && profileError.message.toLowerCase().includes("vendor_data")) {
+              toast.error("Database setup required", {
+                description: "The 'vendor_data' column doesn't exist in the profiles table. Please add it in the Supabase dashboard.",
+                duration: 10000,
+              });
+              throw new Error("Database setup required: " + profileError.message);
+            } else {
+              throw new Error(profileError.message);
+            }
           }
+          
+          await saveUserRole('vendor');
+          setActiveRole('vendor');
+          
+          uiToast({
+            title: "Success",
+            description: "Vendor profile created successfully!"
+          });
+          
+          navigate("/dashboard/vendor");
+        } catch (updateError: any) {
+          console.error("Error updating profile:", updateError);
+          throw updateError;
         }
-        
-        await saveUserRole('vendor');
-        
-        setActiveRole('vendor');
-        
-        uiToast({
-          title: "Success",
-          description: "Vendor profile created successfully!"
-        });
-        
-        navigate("/dashboard/vendor");
-        
       } catch (error: any) {
         console.error("Error during onboarding:", error);
         uiToast({
