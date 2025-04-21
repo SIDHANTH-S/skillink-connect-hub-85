@@ -14,31 +14,50 @@ export const setupSupabaseSchema = async () => {
       .from('profiles')
       .select('id')
       .limit(1);
-      
-    // Create profile table if it doesn't exist or there was an error
-    // Note: This will typically be managed by Supabase directly, but we're adding
-    // this check for completeness
     
-    // Now add custom columns if they don't exist
-    // We'll use Postgres functions in the RPC
-    const { error: addRolesError } = await supabase.rpc('add_column_if_not_exists', {
-      p_table_name: 'profiles',
-      p_column_name: 'roles',
-      p_data_type: 'jsonb'
+    // Now try to add custom columns if they don't exist
+    // Using raw SQL as a workaround for TypeScript issues with RPC
+    const addRolesQuery = `
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name = 'profiles' AND column_name = 'roles') THEN
+          ALTER TABLE profiles ADD COLUMN roles JSONB DEFAULT '[]'::jsonb;
+        END IF;
+      END $$;
+    `;
+    
+    const addVendorDataQuery = `
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name = 'profiles' AND column_name = 'vendor_data') THEN
+          ALTER TABLE profiles ADD COLUMN vendor_data JSONB DEFAULT NULL;
+        END IF;
+      END $$;
+    `;
+    
+    // Execute the raw SQL queries
+    const { error: addRolesError } = await supabase.rpc('exec_sql', { 
+      sql_query: addRolesQuery 
     });
     
     if (addRolesError) {
       console.warn("Could not add roles column:", addRolesError);
+      console.log("Falling back to RLS policies for roles. Please add the column manually in Supabase dashboard.");
+    } else {
+      console.log("Roles column check completed successfully");
     }
     
-    const { error: addVendorDataError } = await supabase.rpc('add_column_if_not_exists', {
-      p_table_name: 'profiles',
-      p_column_name: 'vendor_data',
-      p_data_type: 'jsonb'
+    const { error: addVendorDataError } = await supabase.rpc('exec_sql', { 
+      sql_query: addVendorDataQuery 
     });
     
     if (addVendorDataError) {
       console.warn("Could not add vendor_data column:", addVendorDataError);
+      console.log("Falling back to RLS policies for vendor_data. Please add the column manually in Supabase dashboard.");
+    } else {
+      console.log("Vendor_data column check completed successfully");
     }
     
     console.log("Schema verification complete");

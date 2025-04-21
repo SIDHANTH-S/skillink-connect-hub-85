@@ -22,6 +22,16 @@ interface VendorData {
   created_at: string;
 }
 
+type ProfileWithVendorData = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+  vendor_data?: VendorData;
+  roles?: string[];
+}
+
 const VendorDashboard = () => {
   const [vendorData, setVendorData] = useState<VendorData | null>(null);
   const navigate = useNavigate();
@@ -52,9 +62,12 @@ const VendorDashboard = () => {
           throw new Error(error.message);
         }
         
+        // Type assertion to use our extended profile type that includes vendor_data
+        const typedProfileData = profileData as ProfileWithVendorData;
+        
         // Check if vendor_data exists on the profile
-        if (profileData && profileData.vendor_data) {
-          setVendorData(profileData.vendor_data as VendorData);
+        if (typedProfileData && typedProfileData.vendor_data) {
+          setVendorData(typedProfileData.vendor_data);
         } else {
           toast({
             variant: "destructive",

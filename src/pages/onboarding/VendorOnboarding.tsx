@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building, MapPin, Phone, User, FileText, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+type ProfileWithVendorData = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+  vendor_data?: any;
+  roles?: string[];
+}
 
 const businessTypes: BusinessType[] = [
   'Cement', 'Steel', 'Timber', 'Glass', 'Electrical', 'Plumbing', 
@@ -37,7 +46,6 @@ const VendorOnboarding = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
-    // Check if user is authenticated
     const checkAuthentication = async () => {
       const authenticated = await isAuthenticated();
       if (!authenticated) {
@@ -45,7 +53,6 @@ const VendorOnboarding = () => {
         return;
       }
       
-      // Check if user already has vendor data
       const userId = await getCurrentUserId();
       if (userId) {
         const { data: profileData, error } = await supabase
@@ -54,8 +61,9 @@ const VendorOnboarding = () => {
           .eq('id', userId)
           .single();
           
-        if (!error && profileData && profileData.vendor_data) {
-          // User already has vendor data, redirect to dashboard
+        const typedProfileData = profileData as ProfileWithVendorData;
+        
+        if (!error && typedProfileData && typedProfileData.vendor_data) {
           setActiveRole('vendor');
           navigate('/dashboard/vendor');
         }
@@ -67,7 +75,6 @@ const VendorOnboarding = () => {
   
   const handleChange = (name: keyof Vendor, value: string | number) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when field is edited
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -118,7 +125,6 @@ const VendorOnboarding = () => {
     setIsSubmitting(true);
     
     try {
-      // Get user ID
       const userId = await getCurrentUserId();
       if (!userId) {
         toast({
@@ -130,7 +136,6 @@ const VendorOnboarding = () => {
         return;
       }
       
-      // Create vendor data
       const vendorData = {
         company_name: formData.companyName,
         business_type: formData.businessType,
@@ -142,7 +147,6 @@ const VendorOnboarding = () => {
         created_at: new Date().toISOString(),
       };
       
-      // Get existing profile data first
       const { data: existingProfile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('*')
@@ -150,17 +154,14 @@ const VendorOnboarding = () => {
         .single();
       
       if (profileFetchError && profileFetchError.code !== 'PGRST116') {
-        // Error other than "not found"
         throw new Error(profileFetchError.message);
       }
       
-      // Save vendor data to user's profile
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: userId,
           vendor_data: vendorData,
-          // Make sure we're creating the user's profile if it doesn't exist yet
           full_name: existingProfile?.full_name || null,
           avatar_url: existingProfile?.avatar_url || null,
           updated_at: new Date().toISOString(),
@@ -171,10 +172,8 @@ const VendorOnboarding = () => {
         throw new Error(profileError.message);
       }
       
-      // Add vendor role to user's roles
       await saveUserRole('vendor');
       
-      // Set active role to vendor
       setActiveRole('vendor');
       
       toast({
@@ -182,7 +181,6 @@ const VendorOnboarding = () => {
         description: "Vendor profile created successfully!"
       });
       
-      // Navigate to dashboard
       navigate("/dashboard/vendor");
       
     } catch (error) {
@@ -207,7 +205,6 @@ const VendorOnboarding = () => {
           <CardContent>
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Company Name */}
                 <div className="space-y-2">
                   <Label htmlFor="companyName" className="flex items-center gap-2">
                     <Building className="h-4 w-4" /> Company Name
@@ -224,7 +221,6 @@ const VendorOnboarding = () => {
                   )}
                 </div>
                 
-                {/* Business Type */}
                 <div className="space-y-2">
                   <Label htmlFor="businessType" className="flex items-center gap-2">
                     <Building className="h-4 w-4" /> Business Type
@@ -249,7 +245,6 @@ const VendorOnboarding = () => {
                   )}
                 </div>
                 
-                {/* Years in Business */}
                 <div className="space-y-2">
                   <Label htmlFor="yearsInBusiness" className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" /> Years in Business
@@ -268,7 +263,6 @@ const VendorOnboarding = () => {
                   )}
                 </div>
                 
-                {/* Location */}
                 <div className="space-y-2">
                   <Label htmlFor="location" className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" /> Location
@@ -285,7 +279,6 @@ const VendorOnboarding = () => {
                   )}
                 </div>
                 
-                {/* Contact Person */}
                 <div className="space-y-2">
                   <Label htmlFor="contactPerson" className="flex items-center gap-2">
                     <User className="h-4 w-4" /> Contact Person
@@ -302,7 +295,6 @@ const VendorOnboarding = () => {
                   )}
                 </div>
                 
-                {/* Phone */}
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="flex items-center gap-2">
                     <Phone className="h-4 w-4" /> Phone Number
@@ -319,7 +311,6 @@ const VendorOnboarding = () => {
                   )}
                 </div>
                 
-                {/* Company Logo (optional) */}
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="logo" className="flex items-center gap-2">
                     <Building className="h-4 w-4" /> Company Logo (Optional)
@@ -336,7 +327,6 @@ const VendorOnboarding = () => {
                   </p>
                 </div>
                 
-                {/* Description */}
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="description" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Business Description

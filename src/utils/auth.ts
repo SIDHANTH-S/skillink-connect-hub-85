@@ -2,6 +2,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Role } from "@/types";
 
+// Extended profile type that includes the custom fields
+interface ExtendedProfile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+  roles?: Role[];
+  vendor_data?: any;
+}
+
 // LocalStorage keys
 export const LS_KEYS = {
   ACTIVE_ROLE: "skillink_active_role",
@@ -32,8 +43,13 @@ export const login = async (email: string, password: string): Promise<boolean> =
         .eq('id', data.user.id)
         .single();
         
-      if (profileData && !profileError && profileData.roles && profileData.roles.length > 0) {
-        setActiveRole(profileData.roles[0]);
+      if (profileData && !profileError) {
+        // Type assertion to access our custom fields
+        const typedProfile = profileData as ExtendedProfile;
+        
+        if (typedProfile.roles && typedProfile.roles.length > 0) {
+          setActiveRole(typedProfile.roles[0] as Role);
+        }
       }
     }
 
@@ -103,11 +119,14 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
     .eq('id', userId)
     .single();
     
+  // Type assertion to access the roles field
+  const typedProfile = profileData as ExtendedProfile;
+    
   // If error or no roles property, treat as not having the role
   const hasRole = profileData && !profileError && 
-                  profileData.roles && 
-                  Array.isArray(profileData.roles) && 
-                  profileData.roles.includes(role);
+                  typedProfile.roles && 
+                  Array.isArray(typedProfile.roles) && 
+                  typedProfile.roles.includes(role);
                   
   if (!hasRole) return false;
   
@@ -130,10 +149,13 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
       .eq('id', userId)
       .single();
       
+    // Type assertion to access vendor_data
+    const typedVendorProfile = vendorProfileData as ExtendedProfile;
+    
     return !vendorProfileError && 
-           vendorProfileData && 
-           vendorProfileData.vendor_data !== undefined && 
-           vendorProfileData.vendor_data !== null;
+           typedVendorProfile && 
+           typedVendorProfile.vendor_data !== undefined && 
+           typedVendorProfile.vendor_data !== null;
   }
   
   // Homeowners don't have onboarding
@@ -156,8 +178,11 @@ export const getUserRoles = async (): Promise<Role[]> => {
     .eq('id', userId)
     .single();
     
-  if (!profileError && profileData && profileData.roles && Array.isArray(profileData.roles)) {
-    return profileData.roles as Role[];
+  // Type assertion to access the roles field
+  const typedProfile = profileData as ExtendedProfile;
+    
+  if (!profileError && typedProfile && typedProfile.roles && Array.isArray(typedProfile.roles)) {
+    return typedProfile.roles as Role[];
   }
   
   // Fallback to empty array
@@ -184,11 +209,14 @@ export const saveUserRole = async (role: Role): Promise<boolean> => {
     .eq('id', userId)
     .single();
     
+  // Type assertion to access the roles field
+  const typedExistingProfile = existingProfile as ExtendedProfile;
+  
   let roles: Role[] = [];
   
   // If user has existing roles, add the new one if not already present
-  if (!profileError && existingProfile && existingProfile.roles && Array.isArray(existingProfile.roles)) {
-    roles = [...existingProfile.roles];
+  if (!profileError && typedExistingProfile && typedExistingProfile.roles && Array.isArray(typedExistingProfile.roles)) {
+    roles = [...typedExistingProfile.roles];
     if (!roles.includes(role)) {
       roles.push(role);
     }
@@ -209,7 +237,7 @@ export const saveUserRole = async (role: Role): Promise<boolean> => {
       full_name: existingProfile?.full_name || null,
       avatar_url: existingProfile?.avatar_url || null,
       updated_at: new Date().toISOString(),
-      created_at: existingProfile?.created_at || new Date().toISOString(),
+      created_at: typedExistingProfile?.created_at || new Date().toISOString(),
     });
     
   return !error;

@@ -38,6 +38,8 @@ const RootRedirect = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log("Running setup and auth checks...");
+        
         // First set up our schema if needed
         await setupSupabaseSchema();
         
@@ -79,7 +81,6 @@ const RootRedirect = () => {
     checkAuth();
   }, []);
   
-  // Use useEffect to perform the navigation after state is set
   useEffect(() => {
     if (!isLoading && redirectPath) {
       window.location.href = redirectPath;
