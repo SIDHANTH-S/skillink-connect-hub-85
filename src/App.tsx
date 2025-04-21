@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { isAuthenticated, getActiveRole, getPreferredRole } from "@/utils/auth";
 import { setupSupabaseSchema } from "@/utils/setupSupabase";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Auth pages
 import Login from "./pages/Login";

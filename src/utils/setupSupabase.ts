@@ -26,8 +26,7 @@ export const setupSupabaseSchema = async () => {
         id: 'schema_setup', 
         full_name: 'Schema Setup',
         updated_at: new Date().toISOString()
-      })
-      .select();
+      });
 
     if (setupError) {
       console.warn("Could not create schema setup record:", setupError);
@@ -40,8 +39,8 @@ export const setupSupabaseSchema = async () => {
         .rpc('check_column_exists', { 
           table_name: 'profiles', 
           column_name: 'roles' 
-        }) as any)
-        .single();
+        } as any)
+        .single() as any);
 
       if (!rolesCheckError && !rolesColumnCheck) {
         // The column doesn't exist, try to add it using a direct SQL query
@@ -53,7 +52,7 @@ export const setupSupabaseSchema = async () => {
           const { error: createRolesError } = await (supabase
             .rpc('exec_sql', { 
               sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" 
-            }) as any);
+            } as any) as any);
             
           if (createRolesError) {
             console.warn("Could not add roles column:", createRolesError);
@@ -78,8 +77,8 @@ export const setupSupabaseSchema = async () => {
         .rpc('check_column_exists', { 
           table_name: 'profiles', 
           column_name: 'vendor_data' 
-        }) as any)
-        .single();
+        } as any)
+        .single() as any);
 
       if (!vendorDataCheckError && !vendorDataColumnCheck) {
         // The column doesn't exist, try to add it using a direct SQL query
@@ -91,7 +90,7 @@ export const setupSupabaseSchema = async () => {
           const { error: createVendorDataError } = await (supabase
             .rpc('exec_sql', { 
               sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" 
-            }) as any);
+            } as any) as any);
             
           if (createVendorDataError) {
             console.warn("Could not add vendor_data column:", createVendorDataError);
