@@ -34,33 +34,34 @@ export const setupSupabaseSchema = async () => {
 
     // For the roles column, use raw SQL via RPC call
     try {
-      // Using any type to bypass TypeScript's strict checking for RPC calls
-      const checkColumnParams = { 
-        table_name: 'profiles', 
-        column_name: 'roles' 
-      };
+      // Create a typed version of the rpc function to bypass TypeScript errors
+      const typedRpc = supabase.rpc as unknown as (
+        fn: string, 
+        params?: Record<string, any>
+      ) => any;
       
-      // Completely bypass TypeScript with direct any casting
-      const { data: rolesColumnCheck, error: rolesCheckError } = await (supabase
-        .rpc('check_column_exists', checkColumnParams as any)
-        .single() as any);
+      // Use the typed version for check_column_exists
+      const checkRolesColumn = await typedRpc(
+        'check_column_exists', 
+        { table_name: 'profiles', column_name: 'roles' }
+      ).single();
+      
+      const rolesColumnCheck = checkRolesColumn.data;
+      const rolesCheckError = checkRolesColumn.error;
 
       if (!rolesCheckError && !rolesColumnCheck) {
         // The column doesn't exist, try to add it using a direct SQL query
         console.log("Adding roles column to profiles table...");
         
         try {
-          // Define the SQL query with direct any typing
-          const sqlParams = { 
-            sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" 
-          };
-          
-          // Use direct any casting for the entire RPC operation
-          const { error: createRolesError } = await (supabase
-            .rpc('exec_sql', sqlParams as any) as any);
+          // Use the typed version for exec_sql
+          const execSqlResult = await typedRpc(
+            'exec_sql',
+            { sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb;" }
+          );
             
-          if (createRolesError) {
-            console.warn("Could not add roles column:", createRolesError);
+          if (execSqlResult.error) {
+            console.warn("Could not add roles column:", execSqlResult.error);
             console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN roles JSONB DEFAULT '[]'::jsonb;");
           } else {
             console.log("Roles column added successfully");
@@ -77,33 +78,34 @@ export const setupSupabaseSchema = async () => {
 
     // For the vendor_data column, use similar approach
     try {
-      // Using any type to bypass TypeScript's strict checking
-      const checkColumnParams = { 
-        table_name: 'profiles', 
-        column_name: 'vendor_data' 
-      };
+      // Create a typed version of the rpc function to bypass TypeScript errors
+      const typedRpc = supabase.rpc as unknown as (
+        fn: string, 
+        params?: Record<string, any>
+      ) => any;
       
-      // Completely bypass TypeScript with direct any casting
-      const { data: vendorDataColumnCheck, error: vendorDataCheckError } = await (supabase
-        .rpc('check_column_exists', checkColumnParams as any)
-        .single() as any);
+      // Use the typed version for check_column_exists
+      const checkVendorDataColumn = await typedRpc(
+        'check_column_exists', 
+        { table_name: 'profiles', column_name: 'vendor_data' }
+      ).single();
+      
+      const vendorDataColumnCheck = checkVendorDataColumn.data;
+      const vendorDataCheckError = checkVendorDataColumn.error;
 
       if (!vendorDataCheckError && !vendorDataColumnCheck) {
         // The column doesn't exist, try to add it using a direct SQL query
         console.log("Adding vendor_data column to profiles table...");
         
         try {
-          // Define the SQL query with direct any typing
-          const sqlParams = { 
-            sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" 
-          };
-          
-          // Use direct any casting for the entire RPC operation
-          const { error: createVendorDataError } = await (supabase
-            .rpc('exec_sql', sqlParams as any) as any);
+          // Use the typed version for exec_sql
+          const execSqlResult = await typedRpc(
+            'exec_sql',
+            { sql_query: "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vendor_data JSONB DEFAULT NULL;" }
+          );
             
-          if (createVendorDataError) {
-            console.warn("Could not add vendor_data column:", createVendorDataError);
+          if (execSqlResult.error) {
+            console.warn("Could not add vendor_data column:", execSqlResult.error);
             console.log("Please add the column manually in Supabase dashboard: ALTER TABLE profiles ADD COLUMN vendor_data JSONB DEFAULT NULL;");
           } else {
             console.log("Vendor_data column added successfully");
