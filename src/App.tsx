@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { isAuthenticated, getActiveRole, getPreferredRole } from "@/utils/auth";
 import { setupSupabaseSchema } from "@/utils/setupSupabase";
+import { toast } from "sonner";
 
 // Auth pages
 import Login from "./pages/Login";
@@ -42,6 +44,16 @@ const RootRedirect = () => {
         
         // First set up our schema if needed
         await setupSupabaseSchema();
+        
+        // Show a warning toast about missing columns if needed
+        toast.warning(
+          "Database Setup Required", 
+          {
+            description: "You need to manually add 'roles' and 'vendor_data' columns to the profiles table in Supabase. Please check the console for instructions.",
+            duration: 10000,
+            id: "schema-setup-warning"
+          }
+        );
         
         // Check if user is authenticated
         const authenticated = await isAuthenticated();

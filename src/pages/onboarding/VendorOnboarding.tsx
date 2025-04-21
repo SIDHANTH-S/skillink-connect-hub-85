@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building, MapPin, Phone, User, FileText, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 type ProfileWithVendorData = {
   id: string;
@@ -30,7 +31,7 @@ const businessTypes: BusinessType[] = [
 
 const VendorOnboarding = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   const [formData, setFormData] = useState<Partial<Vendor>>({
     companyName: "",
@@ -55,17 +56,23 @@ const VendorOnboarding = () => {
       
       const userId = await getCurrentUserId();
       if (userId) {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+        try {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          const typedProfileData = profileData as ProfileWithVendorData;
           
-        const typedProfileData = profileData as ProfileWithVendorData;
-        
-        if (!error && typedProfileData && typedProfileData.vendor_data) {
-          setActiveRole('vendor');
-          navigate('/dashboard/vendor');
+          if (!error && typedProfileData && 
+              Object.prototype.hasOwnProperty.call(typedProfileData, 'vendor_data') && 
+              typedProfileData.vendor_data) {
+            setActiveRole('vendor');
+            navigate('/dashboard/vendor');
+          }
+        } catch (error) {
+          console.error("Error checking profile:", error);
         }
       }
     };
@@ -127,7 +134,7 @@ const VendorOnboarding = () => {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        toast({
+        uiToast({
           variant: "destructive",
           title: "Error",
           description: "User ID not found. Please log in again."
@@ -147,48 +154,66 @@ const VendorOnboarding = () => {
         created_at: new Date().toISOString(),
       };
       
-      const { data: existingProfile, error: profileFetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (profileFetchError && profileFetchError.code !== 'PGRST116') {
-        throw new Error(profileFetchError.message);
-      }
-      
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          vendor_data: vendorData,
-          full_name: existingProfile?.full_name || null,
-          avatar_url: existingProfile?.avatar_url || null,
-          updated_at: new Date().toISOString(),
-          created_at: existingProfile?.created_at || new Date().toISOString(),
+      try {
+        const { data: existingProfile, error: profileFetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (profileFetchError && profileFetchError.code !== 'PGRST116') {
+          throw new Error(profileFetchError.message);
+        }
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            vendor_data: vendorData,
+            full_name: existingProfile?.full_name || null,
+            avatar_url: existingProfile?.avatar_url || null,
+            updated_at: new Date().toISOString(),
+            created_at: existingProfile?.created_at || new Date().toISOString(),
+          });
+        
+        if (profileError) {
+          if (profileError.message && profileError.message.includes("vendor_data")) {
+            toast.error("Database setup required", {
+              description: "The 'vendor_data' column doesn't exist in the profiles table. Please add it in the Supabase dashboard.",
+              duration: 10000,
+            });
+            throw new Error("Database setup required: " + profileError.message);
+          } else {
+            throw new Error(profileError.message);
+          }
+        }
+        
+        await saveUserRole('vendor');
+        
+        setActiveRole('vendor');
+        
+        uiToast({
+          title: "Success",
+          description: "Vendor profile created successfully!"
         });
-      
-      if (profileError) {
-        throw new Error(profileError.message);
+        
+        navigate("/dashboard/vendor");
+        
+      } catch (error: any) {
+        console.error("Error during onboarding:", error);
+        uiToast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Something went wrong. Please try again."
+        });
+        setIsSubmitting(false);
       }
-      
-      await saveUserRole('vendor');
-      
-      setActiveRole('vendor');
-      
-      toast({
-        title: "Success",
-        description: "Vendor profile created successfully!"
-      });
-      
-      navigate("/dashboard/vendor");
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during onboarding:", error);
-      toast({
+      uiToast({
         variant: "destructive",
         title: "Error",
-        description: "Something went wrong. Please try again."
+        description: error.message || "Something went wrong. Please try again."
       });
       setIsSubmitting(false);
     }
