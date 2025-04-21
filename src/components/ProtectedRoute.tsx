@@ -53,7 +53,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         }
         
         // Check if onboarding is required but not completed
-        if (requireOnboarding) {
+        // Skip onboarding check for homeowners
+        if (requireOnboarding && activeRole !== 'homeowner') {
           const completed = await hasCompletedOnboarding(activeRole);
           if (!completed) {
             navigate(`/onboarding/${activeRole}`);

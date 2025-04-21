@@ -77,7 +77,7 @@ const SelectRole = () => {
       
       // Homeowners don't need onboarding, redirect directly to dashboard
       if (role === 'homeowner') {
-        navigate(`/dashboard/${role}`);
+        navigate(`/dashboard/homeowner`);
         return;
       }
       
