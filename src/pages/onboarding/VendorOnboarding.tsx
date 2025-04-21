@@ -48,13 +48,13 @@ const VendorOnboarding = () => {
       // Check if user already has vendor data
       const userId = await getCurrentUserId();
       if (userId) {
-        const { data: profileData } = await supabase
+        const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('vendor_data')
+          .select('*')
           .eq('id', userId)
           .single();
           
-        if (profileData?.vendor_data) {
+        if (!error && profileData && profileData.vendor_data) {
           // User already has vendor data, redirect to dashboard
           setActiveRole('vendor');
           navigate('/dashboard/vendor');
@@ -142,12 +142,29 @@ const VendorOnboarding = () => {
         created_at: new Date().toISOString(),
       };
       
+      // Get existing profile data first
+      const { data: existingProfile, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileFetchError && profileFetchError.code !== 'PGRST116') {
+        // Error other than "not found"
+        throw new Error(profileFetchError.message);
+      }
+      
       // Save vendor data to user's profile
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: userId,
           vendor_data: vendorData,
+          // Make sure we're creating the user's profile if it doesn't exist yet
+          full_name: existingProfile?.full_name || null,
+          avatar_url: existingProfile?.avatar_url || null,
+          updated_at: new Date().toISOString(),
+          created_at: existingProfile?.created_at || new Date().toISOString(),
         });
       
       if (profileError) {
@@ -355,4 +372,3 @@ const VendorOnboarding = () => {
 };
 
 export default VendorOnboarding;
-

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -43,7 +44,7 @@ const VendorDashboard = () => {
         // Get vendor data from user profile
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('vendor_data')
+          .select('*')
           .eq('id', userId)
           .single();
           
@@ -51,7 +52,8 @@ const VendorDashboard = () => {
           throw new Error(error.message);
         }
         
-        if (profileData?.vendor_data) {
+        // Check if vendor_data exists on the profile
+        if (profileData && profileData.vendor_data) {
           setVendorData(profileData.vendor_data as VendorData);
         } else {
           toast({

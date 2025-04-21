@@ -26,13 +26,13 @@ export const login = async (email: string, password: string): Promise<boolean> =
       localStorage.setItem(LS_KEYS.USER_ID, data.user.id);
       
       // Try to get user profile and set active role if exists
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('roles')
+        .select('*')
         .eq('id', data.user.id)
         .single();
         
-      if (profileData?.roles && profileData.roles.length > 0) {
+      if (profileData && !profileError && profileData.roles && profileData.roles.length > 0) {
         setActiveRole(profileData.roles[0]);
       }
     }
@@ -97,13 +97,18 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   if (!userId) return false;
   
   // First check if the user has this role in their profile
-  const { data: profileData } = await supabase
+  const { data: profileData, error: profileError } = await supabase
     .from('profiles')
-    .select('roles')
+    .select('*')
     .eq('id', userId)
     .single();
     
-  const hasRole = profileData?.roles?.includes(role);
+  // If error or no roles property, treat as not having the role
+  const hasRole = profileData && !profileError && 
+                  profileData.roles && 
+                  Array.isArray(profileData.roles) && 
+                  profileData.roles.includes(role);
+                  
   if (!hasRole) return false;
   
   if (role === 'professional') {
@@ -119,13 +124,16 @@ export const hasCompletedOnboarding = async (role: Role): Promise<boolean> => {
   
   if (role === 'vendor') {
     // Check if the user has vendor data in their profile
-    const { data: profileData } = await supabase
+    const { data: vendorProfileData, error: vendorProfileError } = await supabase
       .from('profiles')
-      .select('vendor_data')
+      .select('*')
       .eq('id', userId)
       .single();
       
-    return !!profileData?.vendor_data;
+    return !vendorProfileError && 
+           vendorProfileData && 
+           vendorProfileData.vendor_data !== undefined && 
+           vendorProfileData.vendor_data !== null;
   }
   
   // Homeowners don't have onboarding
@@ -142,13 +150,13 @@ export const getUserRoles = async (): Promise<Role[]> => {
   if (!userId) return [];
   
   // Get roles from user profile
-  const { data: profileData } = await supabase
+  const { data: profileData, error: profileError } = await supabase
     .from('profiles')
-    .select('roles')
+    .select('*')
     .eq('id', userId)
     .single();
     
-  if (profileData?.roles && Array.isArray(profileData.roles)) {
+  if (!profileError && profileData && profileData.roles && Array.isArray(profileData.roles)) {
     return profileData.roles as Role[];
   }
   
@@ -170,16 +178,16 @@ export const saveUserRole = async (role: Role): Promise<boolean> => {
   if (!userId) return false;
   
   // Get current roles
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile, error: profileError } = await supabase
     .from('profiles')
-    .select('roles')
+    .select('*')
     .eq('id', userId)
     .single();
     
   let roles: Role[] = [];
   
   // If user has existing roles, add the new one if not already present
-  if (existingProfile?.roles && Array.isArray(existingProfile.roles)) {
+  if (!profileError && existingProfile && existingProfile.roles && Array.isArray(existingProfile.roles)) {
     roles = [...existingProfile.roles];
     if (!roles.includes(role)) {
       roles.push(role);
@@ -189,12 +197,19 @@ export const saveUserRole = async (role: Role): Promise<boolean> => {
     roles = [role];
   }
   
+  console.log("Saving role to profile:", role, "Roles array:", roles);
+  
   // Update profile with new roles array
   const { error } = await supabase
     .from('profiles')
     .upsert({
       id: userId,
-      roles
+      roles,
+      // Make sure we're creating the user's profile if it doesn't exist yet
+      full_name: existingProfile?.full_name || null,
+      avatar_url: existingProfile?.avatar_url || null,
+      updated_at: new Date().toISOString(),
+      created_at: existingProfile?.created_at || new Date().toISOString(),
     });
     
   return !error;
@@ -204,4 +219,3 @@ export const saveUserRole = async (role: Role): Promise<boolean> => {
 export const generateId = (): string => {
   return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
-
